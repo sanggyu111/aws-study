@@ -1,0 +1,1061 @@
+<meta charset="utf-8">
+<title>RDS 접근 제어 한눈에</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column — header, at-a-glance band (TL;DR, key numbers), section map, then sections that each lead with a picture. */
+:root {
+  --bg: #f4f6f8;
+  --paper: #ffffff;
+  --ink: #18212b;
+  --muted: #5a6776;
+  --line: #d6dde5;
+  --accent: #2b5fa8;
+  --accent-soft: #e6eef9;
+  --good: #2f7a55;
+  --bad: #a8433a;
+  --warn: #9a6a12;
+  --warn-soft: #faf1de;
+  --font-display: "Gowun Batang", "Nanum Myeongjo", "AppleMyungjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.8125rem;
+  --step-0: 0.9688rem;
+  --step-1: 1.1875rem;
+  --step-2: 1.5rem;
+  --step-3: 2.125rem;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161c; --paper: #182029; --ink: #e2e8ef; --muted: #95a3b3; --line: #2b3643;
+    --accent: #7eaaf0; --accent-soft: #1d2a3b; --good: #6cc196; --bad: #ec8b80; --warn: #e2b55a; --warn-soft: #2a2416;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161c; --paper: #182029; --ink: #e2e8ef; --muted: #95a3b3; --line: #2b3643;
+  --accent: #7eaaf0; --accent-soft: #1d2a3b; --good: #6cc196; --bad: #ec8b80; --warn: #e2b55a; --warn-soft: #2a2416;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+
+.page { max-width: 920px; margin: 0 auto; padding-block: 40px 64px; display: flex; flex-direction: column; gap: 36px; }
+
+/* header */
+.doc-head { display: flex; flex-direction: column; gap: 10px; }
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.doc-head h1 { font-family: var(--font-display); font-size: var(--step-3); line-height: 1.2; margin: 0; text-wrap: balance; }
+.doc-head .subtitle { margin: 0; color: var(--muted); font-size: var(--step-1); line-height: 1.5; max-width: 60ch; }
+.source { font-size: var(--step--1); color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.source a { overflow-wrap: anywhere; }
+
+/* at a glance */
+.glance { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; }
+.tldr { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+.tldr p.lead { margin: 0; font-size: var(--step-1); line-height: 1.55; font-weight: 500; text-wrap: pretty; }
+.tldr ul { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 4px; }
+.label { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+
+/* section map */
+.toc { display: flex; flex-wrap: wrap; gap: 8px; counter-reset: toc; }
+.toc a {
+  counter-increment: toc;
+  text-decoration: none; color: var(--ink);
+  border: 1px solid var(--line); background: var(--paper);
+  border-radius: 999px; padding: 4px 12px 4px 6px; font-size: var(--step--1);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.toc a::before { content: counter(toc); width: 20px; height: 20px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-size: 0.6875rem; font-weight: 600; }
+.toc a:hover { border-color: var(--accent); }
+
+/* sections */
+.sec { display: flex; flex-direction: column; gap: 16px; scroll-margin-top: 16px; }
+.sec-head { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: baseline; }
+.sec-num { font-family: var(--font-display); font-size: var(--step-2); color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+.sec h2 { font-family: var(--font-display); font-size: var(--step-2); line-height: 1.3; margin: 0; text-wrap: balance; }
+.sec .sec-lead { grid-column: 2; margin: 0; color: var(--muted); }
+
+.block { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; container-type: inline-size; }
+.block-title { font-weight: 600; font-size: var(--step-0); margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.derived { font-size: 0.6875rem; font-weight: 500; color: var(--muted); border: 1px dashed var(--line); border-radius: 4px; padding: 0 6px; }
+.block.text-block { background: transparent; border: none; padding: 0; }
+.md p { margin: 0 0 0.6em; }
+.md p:last-child, .md ul:last-child, .md ol:last-child { margin-bottom: 0; }
+.md ul, .md ol { margin: 0 0 0.6em; padding-left: 1.2em; }
+.md code { font-family: var(--font-mono); font-size: 0.86em; background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; }
+
+/* stats */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.stat { display: flex; flex-direction: column; gap: 2px; padding: 4px 0; border-top: 3px solid var(--accent); }
+.stat .v { font-family: var(--font-display); font-size: var(--step-3); font-weight: 700; line-height: 1.1; color: var(--accent); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat .l { font-weight: 600; font-size: var(--step--1); }
+.stat .n { color: var(--muted); font-size: 0.75rem; line-height: 1.45; }
+.glance .stats { grid-template-columns: 1fr 1fr; align-content: start; }
+.glance .stats-wrap { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+
+/* cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.card .tag { align-self: flex-start; font-size: 0.6875rem; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 4px; padding: 0 6px; }
+.card b { font-size: var(--step-0); line-height: 1.4; }
+.card span.t { color: var(--muted); font-size: var(--step--1); line-height: 1.55; }
+
+/* compare */
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); }
+th, td { padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+thead th { font-weight: 600; color: var(--muted); font-size: 0.75rem; letter-spacing: 0.03em; white-space: nowrap; }
+tbody th { font-weight: 600; }
+td.hl, th.hl { background: var(--accent-soft); }
+thead th.hl { color: var(--accent); }
+.yes { color: var(--good); font-weight: 700; }
+.no { color: var(--bad); font-weight: 700; }
+
+/* callout */
+.callout { border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 10px 10px 0; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; }
+.callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+.callout .label { color: var(--accent); }
+.callout.warn .label { color: var(--warn); }
+
+/* timeline */
+.timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.tl { position: relative; padding: 0 0 18px 34px; display: flex; flex-direction: column; gap: 2px; }
+.tl::before { content: ""; position: absolute; left: 10px; top: 22px; bottom: 0; width: 2px; background: var(--line); }
+.tl:last-child { padding-bottom: 0; }
+.tl:last-child::before { display: none; }
+.tl .dot { position: absolute; left: 2px; top: 4px; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); background: var(--paper); }
+.tl[data-status="done"] .dot { border-color: var(--accent); background: var(--accent); }
+.tl[data-status="now"] .dot { border-color: var(--accent); background: var(--paper); box-shadow: 0 0 0 4px var(--accent-soft); }
+.tl[data-status="now"] .dot::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent); }
+.tl .when { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); }
+.tl[data-status="now"] .when { color: var(--accent); font-weight: 500; }
+.tl b { line-height: 1.4; }
+.tl span.t { color: var(--muted); font-size: var(--step--1); }
+
+/* flow with step-through */
+.flow-scroll { overflow-x: auto; min-width: 0; }
+.flow { position: relative; display: flex; gap: 56px; align-items: center; width: max-content; min-width: 100%; justify-content: center; padding: 10px 4px; }
+.flow[data-dir="col"] { flex-direction: column; gap: 44px; width: 100%; }
+.flow .rank { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 14px; }
+.flow[data-dir="col"] .rank { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+.wires { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: visible; }
+.wire { fill: none; stroke: var(--line); stroke-width: 1.75; transition: stroke 0.2s, opacity 0.2s; }
+.wire.on { stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: 7 5; }
+.wire.dim, .wire-label.dim { opacity: 0.3; }
+.wire-label { font-family: var(--font-body); font-size: 11px; fill: var(--muted); paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; }
+.wire-label.on { fill: var(--accent); font-weight: 600; }
+.arrow-head { fill: var(--line); }
+.arrow-head.on { fill: var(--accent); }
+@media (prefers-reduced-motion: no-preference) {
+  .wire.on { animation: wire-run 0.9s linear infinite; }
+  @keyframes wire-run { to { stroke-dashoffset: -12; } }
+}
+.node {
+  position: relative; width: 152px;
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: 10px;
+  padding: 8px 10px 9px; display: flex; flex-direction: column; gap: 2px;
+  transition: border-color 0.2s, opacity 0.2s, box-shadow 0.2s;
+}
+.node[data-kind="store"] { border-style: double; border-width: 3px; }
+.node[data-kind="output"] { border-radius: 10px 10px 18px 18px; }
+.node[data-kind="input"] { border-radius: 18px 10px 10px 18px; }
+.node[data-kind="decision"] { border-style: dashed; }
+.node .kind { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; color: var(--muted); }
+.node b { font-size: var(--step--1); line-height: 1.35; overflow-wrap: anywhere; }
+.node small { font-size: 0.75rem; color: var(--muted); line-height: 1.4; overflow-wrap: anywhere; }
+.node .badge {
+  position: absolute; top: -9px; right: -9px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+  background: var(--paper); border: 1.5px solid var(--line); color: var(--muted);
+  font-size: 0.6875rem; font-weight: 600; display: grid; place-items: center; font-variant-numeric: tabular-nums;
+}
+.node.on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.node.on .kind, .node.on .badge { color: var(--accent); border-color: var(--accent); }
+.node.dim { opacity: 0.35; }
+.stepper { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; border-top: 1px solid var(--line); padding-top: 12px; }
+.stepper button { border: 1px solid var(--line); background: var(--paper); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: var(--step--1); white-space: nowrap; }
+.stepper button:hover:not([disabled]) { border-color: var(--accent); color: var(--accent); }
+.stepper button[disabled] { opacity: 0.4; cursor: default; }
+.step-text { font-size: var(--step--1); line-height: 1.55; min-width: 0; }
+.step-text .num { display: inline-block; font-weight: 600; color: var(--accent); margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+.foot { border-top: 1px solid var(--line); padding-top: 16px; font-size: 0.75rem; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+
+@media (max-width: 720px) {
+  .page { padding-block: 24px 48px; gap: 28px; }
+  .glance { grid-template-columns: 1fr; }
+  .stepper { grid-template-columns: 1fr 1fr; }
+  .stepper .step-text { grid-column: 1 / -1; grid-row: 1; }
+}
+</style>
+
+<div class="page" id="page"></div>
+
+<!-- Replace this whole JSON block with the document's data. Write "</" inside strings as "<\/". Schema: references/blocks.md -->
+<script id="doc-data" type="application/json">
+{
+  "title": "RDS 접근 제어 한눈에",
+  "subtitle": "비공개 서브넷의 RDS DB를 같은 VPC의 EC2에서만 접속하게 만드는 보안 그룹 구성",
+  "source": {
+    "name": "Scenarios for accessing a DB instance in a VPC / Controlling access with security groups (Amazon RDS User Guide)",
+    "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_VPC.Scenarios.html",
+    "date": "2026-10-22"
+  },
+  "tldr": "DB를 비공개로 두고 EC2만 접속하게 하려면, EC2 보안 그룹은 내 IP에서 TCP 22(SSH)를 허용하고, DB 보안 그룹은 DB 포트에 대해 EC2 보안 그룹을 소스(Source)로 지정한 인바운드 규칙을 만든다. 아웃바운드 규칙은 DB가 클라이언트로 동작할 때만 적용된다.",
+  "keypoints": [
+    "RDS가 지원하는 VPC 접근 시나리오는 4가지: 같은 VPC의 EC2, 다른 VPC의 EC2, 인터넷의 클라이언트, 사설 네트워크",
+    "DB 인스턴스는 기본적으로 네트워크 접근이 꺼져 있다(network access is turned off). 보안 그룹 규칙으로 열어야 한다",
+    "소스(Source)에 보안 그룹을 지정하면 그 보안 그룹을 쓰는 모든 인스턴스의 트래픽이 허용된다",
+    "RDS DB 서브넷 그룹(DB subnet group)은 최소 두 개의 가용 영역(Availability Zone)에 서브넷이 필요하다",
+    "아웃바운드 규칙은 보통 DB 인스턴스에 적용되지 않는다(예외: Oracle 아웃바운드 DB 링크처럼 DB가 클라이언트일 때)"
+  ],
+  "stats": [
+    {
+      "value": "20개",
+      "label": "보안 그룹 하나에 지정할 수 있는 규칙 수",
+      "note": "up to 20 rules in a security group"
+    },
+    {
+      "value": "2개 이상",
+      "label": "DB 서브넷 그룹에 필요한 가용 영역",
+      "note": "at least two Availability Zones"
+    },
+    {
+      "value": "TCP 22",
+      "label": "EC2 SSH 접속 포트",
+      "note": "EC2 보안 그룹 인바운드 예시"
+    },
+    {
+      "value": "TCP 3306",
+      "label": "RDS for MySQL 포트 예시",
+      "note": "DB 생성 시 지정한 포트와 같아야 함"
+    }
+  ],
+  "sections": [
+    {
+      "id": "scenarios",
+      "heading": "VPC 안의 DB에 접근하는 4가지 방법",
+      "lead": "내 구성은 첫 번째 시나리오, 같은 VPC의 EC2가 DB에 접근하는 경우다.",
+      "blocks": [
+        {
+          "type": "compare",
+          "title": "접근 시나리오 비교",
+          "derived": true,
+          "columns": [
+            "기준",
+            "같은 VPC의 EC2",
+            "다른 VPC의 EC2",
+            "인터넷의 클라이언트",
+            "사설 네트워크"
+          ],
+          "rows": [
+            [
+              "원문 이름",
+              "An Amazon EC2 instance in the same VPC",
+              "An EC2 instance in a different VPC",
+              "A client application through the internet",
+              "A private network"
+            ],
+            [
+              "연결 수단",
+              "같은 VPC 안, 보안 그룹 간 규칙",
+              "VPC 피어링(VPC peering)",
+              "공개 서브넷 + 인터넷 게이트웨이(internet gateway)",
+              "Site-to-Site VPN, Direct Connect, Client VPN"
+            ],
+            [
+              "DB 접근 허용 방식",
+              "DB 보안 그룹 소스(Source) = EC2 보안 그룹",
+              "사설 IP로 라우팅",
+              "인바운드 규칙에 클라이언트 허용",
+              "DB가 공개 접근 불가(isn't publicly accessible)일 때의 선택지"
+            ],
+            [
+              "인터넷에서 DB 직접 접속",
+              "✗",
+              "✗",
+              "✓",
+              "✗"
+            ],
+            [
+              "내 구성(EC2 경유)",
+              "✓",
+              "✗",
+              "✗",
+              "✗"
+            ]
+          ],
+          "highlight": 1
+        },
+        {
+          "type": "callout",
+          "tone": "info",
+          "title": "팁 (원문 Tip)",
+          "text": "DB 인스턴스를 만들 때 EC2 인스턴스와의 네트워크 연결을 자동으로 설정할 수도 있다(Configure automatic network connectivity with an EC2 instance). 이번에는 보안 그룹 규칙을 직접 설정한다."
+        }
+      ]
+    },
+    {
+      "id": "private-subnet",
+      "heading": "DB는 어디에 두나: DB 서브넷 그룹과 비공개 서브넷",
+      "lead": "EC2(웹 서버)는 공개 서브넷, DB는 비공개 서브넷에 두고, 서브넷 그룹은 두 AZ 이상에 걸친다.",
+      "blocks": [
+        {
+          "type": "cards",
+          "derived": true,
+          "items": [
+            {
+              "tag": "공개 서브넷",
+              "title": "EC2 인스턴스",
+              "text": "VPC 라우팅 테이블을 통해 인터넷에서 EC2로 접근할 수 있다. 예: 포트 22로 TCP 접근 허용."
+            },
+            {
+              "tag": "비공개 서브넷",
+              "title": "RDS DB 인스턴스",
+              "text": "원문 다이어그램은 공개 웹 서버와 비공개 데이터베이스(a public web server and a private database) 구성이다."
+            },
+            {
+              "tag": "DB 서브넷 그룹",
+              "title": "최소 2개 AZ",
+              "text": "RDS DB 서브넷 그룹(DB subnet group)은 최소 두 개의 가용 영역에 서브넷이 필요하다."
+            },
+            {
+              "tag": "추가 서브넷",
+              "title": "Multi-AZ 대비",
+              "text": "다른 AZ의 추가 공개·비공개 서브넷이 있으면 나중에 Multi-AZ 배포로 바꾸기 쉽다."
+            }
+          ]
+        },
+        {
+          "type": "callout",
+          "tone": "info",
+          "title": "덧붙임",
+          "text": "두 원문은 RDS 콘솔의 **퍼블릭 액세스(Public access)** 설정을 단계로 설명하지 않는다. 원문은 \"DB 인스턴스가 공개 접근 불가(isn't publicly accessible)\"인 경우를 전제로 사설 네트워크 접근을 설명한다. EC2만 접속하게 하려면 DB 생성 시 퍼블릭 액세스를 **아니요(No)** 로 두고, 비공개 서브넷이 담긴 DB 서브넷 그룹을 고르면 된다."
+        }
+      ]
+    },
+    {
+      "id": "access-flow",
+      "heading": "내 PC에서 DB까지: 트래픽은 어떻게 통과하나",
+      "lead": "SSH로 EC2에 들어간 뒤, EC2에서 DB 포트로 RDS에 접속한다. 관문은 보안 그룹 두 개다.",
+      "blocks": [
+        {
+          "type": "flow",
+          "title": "내 PC → EC2(SSH) → RDS(DB 포트)",
+          "derived": true,
+          "nodes": [
+            {
+              "id": "pc",
+              "label": "내 PC",
+              "kind": "input",
+              "note": "내 IP에서 SSH 접속 시작"
+            },
+            {
+              "id": "ec2sg",
+              "label": "EC2 보안 그룹",
+              "kind": "decision",
+              "note": "인바운드: TCP 22, 소스 = 내 IP?"
+            },
+            {
+              "id": "ec2",
+              "label": "EC2 인스턴스",
+              "kind": "process",
+              "note": "게이트웨이 역할, DB 클라이언트 실행"
+            },
+            {
+              "id": "rdssg",
+              "label": "DB 보안 그룹",
+              "kind": "decision",
+              "note": "인바운드: DB 포트, 소스 = EC2 SG?"
+            },
+            {
+              "id": "rds",
+              "label": "RDS DB 인스턴스",
+              "kind": "output",
+              "note": "비공개 서브넷, 공개 접근 불가"
+            },
+            {
+              "id": "deny",
+              "label": "접근 차단",
+              "kind": "output",
+              "note": "규칙에 맞지 않으면 허용되지 않음"
+            }
+          ],
+          "edges": [
+            {
+              "from": "pc",
+              "to": "ec2sg",
+              "label": "SSH 22"
+            },
+            {
+              "from": "ec2sg",
+              "to": "ec2",
+              "label": "내 IP 일치"
+            },
+            {
+              "from": "ec2sg",
+              "to": "deny",
+              "label": "불일치"
+            },
+            {
+              "from": "ec2",
+              "to": "rdssg",
+              "label": "DB 포트"
+            },
+            {
+              "from": "rdssg",
+              "to": "rds",
+              "label": "EC2 SG 일치"
+            },
+            {
+              "from": "rdssg",
+              "to": "deny",
+              "label": "불일치"
+            }
+          ],
+          "steps": [
+            {
+              "focus": [
+                "pc",
+                "ec2sg"
+              ],
+              "text": "내 PC에서 EC2로 SSH(TCP 22) 접속을 시도한다. EC2 보안 그룹의 인바운드 규칙이 내 IP를 소스로 허용해야 통과한다."
+            },
+            {
+              "focus": [
+                "ec2sg",
+                "deny"
+              ],
+              "text": "소스 IP나 포트가 규칙과 맞지 않으면 차단된다. 집이나 카페처럼 IP가 바뀌면 규칙을 고쳐야 하는 이유다."
+            },
+            {
+              "focus": [
+                "ec2",
+                "rdssg"
+              ],
+              "text": "EC2 안에서 DB 클라이언트로 RDS 엔드포인트의 DB 포트(예: MySQL 3306)에 접속한다. 이번에는 DB 보안 그룹이 검사한다."
+            },
+            {
+              "focus": [
+                "rdssg",
+                "rds"
+              ],
+              "text": "DB 보안 그룹 인바운드 규칙의 소스가 EC2 보안 그룹이면, 그 보안 그룹에 속한 EC2의 트래픽이 허용된다. IP가 아니라 보안 그룹 멤버십으로 판단한다."
+            },
+            {
+              "focus": [
+                "rdssg",
+                "deny"
+              ],
+              "text": "내 PC가 DB에 직접 접속하면 소스가 EC2 보안 그룹이 아니므로 차단된다. DB 인스턴스는 기본적으로 네트워크 접근이 꺼져 있기 때문이다."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "setup-order",
+      "heading": "보안 그룹은 어떤 순서로 만드나",
+      "lead": "원문의 보안 그룹 시나리오(Security group scenario) 4단계: EC2 보안 그룹 → EC2 → DB 보안 그룹 → DB.",
+      "blocks": [
+        {
+          "type": "flow",
+          "title": "보안 그룹 시나리오 4단계",
+          "nodes": [
+            {
+              "id": "sg1",
+              "label": "EC2 보안 그룹",
+              "kind": "store",
+              "note": "sg-0123ec2example, 소스 = 클라이언트 IP"
+            },
+            {
+              "id": "inst",
+              "label": "EC2 생성",
+              "kind": "process",
+              "note": "sg-0123ec2example에 추가"
+            },
+            {
+              "id": "sg2",
+              "label": "DB 보안 그룹",
+              "kind": "store",
+              "note": "sg-6789rdsexample, 소스 = sg-0123ec2example"
+            },
+            {
+              "id": "db",
+              "label": "DB 인스턴스 생성",
+              "kind": "output",
+              "note": "sg-6789rdsexample에 추가, 같은 포트"
+            }
+          ],
+          "edges": [
+            {
+              "from": "sg1",
+              "to": "inst",
+              "label": "연결"
+            },
+            {
+              "from": "inst",
+              "to": "sg2",
+              "label": "소스로 지정"
+            },
+            {
+              "from": "sg2",
+              "to": "db",
+              "label": "연결"
+            }
+          ],
+          "steps": [
+            {
+              "focus": [
+                "sg1"
+              ],
+              "text": "VPC 보안 그룹(예: sg-0123ec2example)을 만들고 클라이언트 애플리케이션의 IP 주소를 소스로 하는 인바운드 규칙을 정의한다. 내 경우 클라이언트는 내 PC다."
+            },
+            {
+              "focus": [
+                "inst"
+              ],
+              "text": "애플리케이션용 EC2 인스턴스를 만들고 앞 단계의 보안 그룹(sg-0123ec2example)에 추가한다."
+            },
+            {
+              "focus": [
+                "sg2"
+              ],
+              "text": "두 번째 VPC 보안 그룹(예: sg-6789rdsexample)을 만들고 1단계의 보안 그룹(sg-0123ec2example)을 소스로 지정한 규칙을 만든다."
+            },
+            {
+              "focus": [
+                "db"
+              ],
+              "text": "새 DB 인스턴스를 만들어 sg-6789rdsexample에 추가한다. DB를 만들 때 3단계 규칙에 지정한 포트 번호와 같은 포트를 써야 한다."
+            }
+          ]
+        },
+        {
+          "type": "callout",
+          "tone": "info",
+          "title": "이미 만든 DB에 보안 그룹 붙이기",
+          "text": "RDS 콘솔의 **수정(Modify)**, `ModifyDBInstance` API, 또는 `aws rds modify-db-instance --db-instance-identifier dbName --vpc-security-group-ids sg-ID` 로 보안 그룹을 연결할 수 있다."
+        }
+      ]
+    },
+    {
+      "id": "inbound-rule",
+      "heading": "DB 보안 그룹 인바운드 규칙은 어떻게 만드나",
+      "lead": "VPC 콘솔에서 DB 보안 그룹의 인바운드 규칙에 DB 포트 + EC2 보안 그룹 소스를 추가한다.",
+      "blocks": [
+        {
+          "type": "compare",
+          "title": "내 구성의 규칙 정리",
+          "derived": true,
+          "columns": [
+            "보안 그룹",
+            "방향",
+            "유형(Type)",
+            "포트",
+            "소스(Source)"
+          ],
+          "rows": [
+            [
+              "EC2 보안 그룹",
+              "인바운드(Inbound)",
+              "SSH",
+              "TCP 22",
+              "내 IP 주소"
+            ],
+            [
+              "DB 보안 그룹",
+              "인바운드(Inbound)",
+              "MYSQL/Aurora 등 DB 엔진에 맞는 항목",
+              "DB 생성 시 지정한 포트 (예: 3306)",
+              "EC2 보안 그룹 ID"
+            ]
+          ]
+        },
+        {
+          "type": "flow",
+          "title": "콘솔에서 규칙 추가하기",
+          "nodes": [
+            {
+              "id": "open",
+              "label": "Security groups",
+              "kind": "input",
+              "note": "VPC 콘솔 탐색 창에서 선택"
+            },
+            {
+              "id": "edit",
+              "label": "Edit inbound rules",
+              "kind": "process",
+              "note": "DB 보안 그룹의 Inbound rules 탭"
+            },
+            {
+              "id": "type",
+              "label": "Type 선택",
+              "kind": "process",
+              "note": "DB 포트에 맞는 항목, 예: MYSQL/Aurora"
+            },
+            {
+              "id": "src",
+              "label": "Source 지정",
+              "kind": "process",
+              "note": "EC2 보안 그룹 ID를 입력해 선택"
+            },
+            {
+              "id": "save",
+              "label": "Save rules",
+              "kind": "output",
+              "note": "규칙 저장"
+            }
+          ],
+          "edges": [
+            {
+              "from": "open",
+              "to": "edit",
+              "label": "DB SG 선택"
+            },
+            {
+              "from": "edit",
+              "to": "type",
+              "label": "Add rule"
+            },
+            {
+              "from": "type",
+              "to": "src"
+            },
+            {
+              "from": "src",
+              "to": "save"
+            }
+          ],
+          "steps": [
+            {
+              "focus": [
+                "open",
+                "edit"
+              ],
+              "text": "VPC 콘솔의 Security groups에서 DB용 보안 그룹을 고르고 Inbound rules 탭에서 Edit inbound rules를 누른다."
+            },
+            {
+              "focus": [
+                "type"
+              ],
+              "text": "Add rule 후 Type에서 DB를 만들 때 쓴 포트에 해당하는 항목(예: MYSQL/Aurora)을 고른다. 포트가 다르면 접속되지 않는다."
+            },
+            {
+              "focus": [
+                "src"
+              ],
+              "text": "Source 칸에 보안 그룹 ID를 입력하기 시작하면 일치하는 목록이 뜬다. EC2가 쓰는 보안 그룹을 고른다."
+            },
+            {
+              "focus": [
+                "save"
+              ],
+              "text": "Save rules로 저장한다. 이후 같은 보안 그룹에 연결된 모든 DB 인스턴스에 같은 규칙이 적용된다."
+            }
+          ]
+        },
+        {
+          "type": "callout",
+          "tone": "warn",
+          "title": "주의",
+          "text": "- 필요하면 **All TCP**(UDP를 쓰면 **All UDP**) 유형으로 같은 소스 규칙을 추가할 수 있다고 원문은 말하지만, DB 포트 하나만 여는 것이 범위가 가장 좁다.\n- 포트를 기본값이 아닌 값으로 설정하면 RDS 콘솔에 보이는 규칙 이름이 달라진다.\n- 보안 그룹 하나에 규칙은 최대 20개까지."
+        }
+      ]
+    },
+    {
+      "id": "outbound",
+      "heading": "아웃바운드 규칙은 신경 써야 하나",
+      "lead": "DB 보안 그룹의 아웃바운드 규칙은 보통 DB 인스턴스에 적용되지 않는다.",
+      "blocks": [
+        {
+          "type": "cards",
+          "items": [
+            {
+              "tag": "인바운드",
+              "title": "DB로 들어오는 트래픽",
+              "text": "특정 소스(주소 범위 또는 다른 VPC 보안 그룹)가 DB 인스턴스에 접근하도록 허용한다. 이번 구성의 핵심."
+            },
+            {
+              "tag": "아웃바운드",
+              "title": "DB에서 나가는 트래픽",
+              "text": "보안 그룹은 아웃바운드 규칙도 가질 수 있지만, 보통 DB 인스턴스에는 적용되지 않는다."
+            },
+            {
+              "tag": "예외",
+              "title": "DB가 클라이언트일 때",
+              "text": "아웃바운드 규칙은 DB 인스턴스가 클라이언트로 동작할 때만 적용된다. 예: 아웃바운드 데이터베이스 링크가 있는 Oracle DB 인스턴스."
+            }
+          ]
+        },
+        {
+          "type": "callout",
+          "tone": "info",
+          "title": "덧붙임",
+          "text": "원문에는 없지만, VPC 보안 그룹은 상태 저장(stateful) 방식이라 허용된 인바운드 요청에 대한 응답은 아웃바운드 규칙과 상관없이 나간다. 그래서 EC2→DB 접속에서 DB 보안 그룹의 아웃바운드를 따로 열 필요가 없다. 반대로 EC2 보안 그룹의 아웃바운드가 DB 포트로 나가는 트래픽을 막고 있으면 안 된다(기본값은 전체 허용)."
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<script>
+const DATA = JSON.parse(document.getElementById("doc-data").textContent);
+const $page = document.getElementById("page");
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+/* minimal markdown: escaped text, **bold**, `code`, https links, - lists, paragraphs */
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function inline(s) {
+  return String(s).split(/(`[^`]+`)/g).map((p) => /^`[^`]+`$/.test(p) ? "<code>" + esc(p.slice(1, -1)) + "</code>" :
+    esc(p).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/\[([^\]]+)\]\((https:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')).join("");
+}
+function md(src) {
+  const out = []; let para = [], list = [];
+  const flush = () => {
+    if (para.length) { out.push("<p>" + para.map(inline).join("<br>") + "</p>"); para = []; }
+    if (list.length) { out.push("<ul>" + list.map((i) => "<li>" + inline(i) + "</li>").join("") + "</ul>"); list = []; }
+  };
+  for (const line of String(src).split("\n")) {
+    const m = line.match(/^\s*[-*]\s+(.*)/);
+    if (m) { if (para.length) { out.push("<p>" + para.map(inline).join("<br>") + "</p>"); para = []; } list.push(m[1]); }
+    else if (!line.trim()) flush();
+    else { if (list.length) flush(); para.push(line); }
+  }
+  flush();
+  return out.join("");
+}
+
+function blockShell(b, extraClass) {
+  const box = el("div", "block" + (extraClass ? " " + extraClass : ""));
+  if (b.title || b.derived) {
+    const t = el("p", "block-title", b.title || "");
+    if (b.derived) t.append(el("span", "derived", "원문을 바탕으로 정리"));
+    box.append(t);
+  }
+  return box;
+}
+
+function renderStats(items) {
+  const g = el("div", "stats");
+  for (const s of items || []) {
+    const c = el("div", "stat");
+    c.append(el("span", "v", s.value), el("span", "l", s.label));
+    if (s.note) c.append(el("span", "n", s.note));
+    g.append(c);
+  }
+  return g;
+}
+
+function renderCards(b) {
+  const box = blockShell(b);
+  const g = el("div", "cards");
+  for (const c of b.items || []) {
+    const card = el("div", "card");
+    if (c.tag) card.append(el("span", "tag", c.tag));
+    card.append(el("b", null, c.title));
+    if (c.text) card.append(el("span", "t", c.text));
+    g.append(card);
+  }
+  box.append(g);
+  return box;
+}
+
+function cell(tag, v, hl) {
+  const c = el(tag, hl ? "hl" : null);
+  const s = String(v ?? "");
+  if (/^(✓|O|o|예|가능)$/.test(s)) c.append(el("span", "yes", "✓"));
+  else if (/^(✗|X|x|아니오|불가)$/.test(s)) c.append(el("span", "no", "✗"));
+  else c.textContent = s;
+  return c;
+}
+function renderCompare(b) {
+  const box = blockShell(b);
+  const wrap = el("div", "tbl");
+  const t = el("table");
+  const hl = Number.isInteger(b.highlight) ? b.highlight : -1;
+  const thead = el("thead"), tr = el("tr");
+  (b.columns || []).forEach((c, i) => { const th = el("th", i === hl ? "hl" : null, c); th.scope = "col"; tr.append(th); });
+  thead.append(tr);
+  const tbody = el("tbody");
+  for (const row of b.rows || []) {
+    const r = el("tr");
+    row.forEach((v, i) => { const c = cell(i === 0 ? "th" : "td", v, i === hl); if (i === 0) { c.scope = "row"; c.textContent = String(v); } r.append(c); });
+    tbody.append(r);
+  }
+  t.append(thead, tbody);
+  wrap.append(t);
+  box.append(wrap);
+  return box;
+}
+
+function renderCallout(b) {
+  const c = el("div", "callout" + (b.tone === "warn" ? " warn" : ""));
+  c.append(el("p", "label", b.title || (b.tone === "warn" ? "주의" : "참고")));
+  const body = el("div", "md");
+  body.innerHTML = md(b.text || "");
+  c.append(body);
+  return c;
+}
+
+function renderTimeline(b) {
+  const box = blockShell(b);
+  const ol = el("ol", "timeline");
+  for (const it of b.items || []) {
+    const li = el("li", "tl");
+    li.dataset.status = ["done", "now", "next"].includes(it.status) ? it.status : "next";
+    li.append(el("span", "dot"));
+    if (it.when) li.append(el("span", "when", it.when));
+    li.append(el("b", null, it.title));
+    if (it.text) li.append(el("span", "t", it.text));
+    ol.append(li);
+  }
+  box.append(ol);
+  return box;
+}
+
+function renderText(b) {
+  const box = blockShell(b, b.title || b.derived ? "" : "text-block");
+  const d = el("div", "md");
+  d.innerHTML = md(b.md || "");
+  box.append(d);
+  return box;
+}
+
+/* flow: longest-path ranks left → right, SVG wires, step-through highlighting */
+const KIND = { input: "입력", process: "처리", store: "저장", output: "결과", concept: "개념", decision: "판단" };
+let flowSeq = 0;
+function renderFlow(b) {
+  const box = blockShell(b);
+  const uid = "f" + ++flowSeq;
+  const nodes = (b.nodes || []).filter((n) => n && n.id && n.label);
+  const ids = new Set(nodes.map((n) => n.id));
+  const edges = (b.edges || []).filter((e) => ids.has(e.from) && ids.has(e.to) && e.from !== e.to);
+  const steps = (b.steps || []).filter((s) => s && s.text).map((s) => ({ focus: (s.focus || []).filter((x) => ids.has(x)), text: s.text }));
+
+  const rank = Object.fromEntries(nodes.map((n) => [n.id, 0]));
+  for (let k = 0; k < nodes.length; k++) {
+    let changed = false;
+    for (const e of edges) if (rank[e.from] + 1 > rank[e.to] && rank[e.from] + 1 < nodes.length) { rank[e.to] = rank[e.from] + 1; changed = true; }
+    if (!changed) break;
+  }
+  const firstStep = {};
+  steps.forEach((s, i) => s.focus.forEach((id) => { if (!(id in firstStep)) firstStep[id] = i; }));
+
+  const scroll = el("div", "flow-scroll");
+  const flow = el("div", "flow");
+  flow.dataset.dir = "row";
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.classList.add("wires");
+  svg.setAttribute("aria-hidden", "true");
+  flow.append(svg);
+
+  const nodeEls = {};
+  const maxRank = Math.max(0, ...Object.values(rank));
+  for (let r = 0; r <= maxRank; r++) {
+    const col = el("div", "rank");
+    for (const n of nodes.filter((n) => rank[n.id] === r)) {
+      const ne = el("div", "node");
+      ne.dataset.kind = KIND[n.kind] ? n.kind : "concept";
+      ne.append(el("span", "kind", KIND[ne.dataset.kind]), el("b", null, n.label));
+      if (n.note) ne.append(el("small", null, n.note));
+      if (n.id in firstStep) ne.append(el("span", "badge", String(firstStep[n.id] + 1)));
+      nodeEls[n.id] = ne;
+      col.append(ne);
+    }
+    if (col.childElementCount) flow.append(col);
+  }
+  scroll.append(flow);
+  box.append(scroll);
+
+  let wireEls = [], current = -1;
+  const draw = () => {
+    const bx = flow.getBoundingClientRect();
+    if (!bx.width) return;
+    const row = flow.dataset.dir === "row";
+    svg.setAttribute("viewBox", `0 0 ${bx.width} ${bx.height}`);
+    svg.setAttribute("width", bx.width);
+    svg.setAttribute("height", bx.height);
+    svg.replaceChildren();
+    const defs = document.createElementNS(NS, "defs");
+    for (const k of ["off", "on"]) {
+      const mk = document.createElementNS(NS, "marker");
+      mk.setAttribute("id", `${uid}-${k}`);
+      mk.setAttribute("viewBox", "0 0 10 10");
+      mk.setAttribute("refX", "9"); mk.setAttribute("refY", "5");
+      mk.setAttribute("markerWidth", "7"); mk.setAttribute("markerHeight", "7");
+      mk.setAttribute("markerUnits", "userSpaceOnUse");
+      mk.setAttribute("orient", "auto");
+      const p = document.createElementNS(NS, "path");
+      p.setAttribute("d", "M0,0 L10,5 L0,10 z");
+      p.setAttribute("class", "arrow-head" + (k === "on" ? " on" : ""));
+      mk.append(p);
+      defs.append(mk);
+    }
+    svg.append(defs);
+    wireEls = edges.map((e) => {
+      const a = nodeEls[e.from].getBoundingClientRect(), c = nodeEls[e.to].getBoundingClientRect();
+      let x1, y1, x2, y2, d;
+      if (row) {
+        x1 = a.right - bx.left; y1 = a.top + a.height / 2 - bx.top;
+        x2 = c.left - bx.left - 2; y2 = c.top + c.height / 2 - bx.top;
+        const dx = Math.max(28, Math.abs(x2 - x1) / 2);
+        d = `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
+      } else {
+        x1 = a.left + a.width / 2 - bx.left; y1 = a.bottom - bx.top;
+        x2 = c.left + c.width / 2 - bx.left; y2 = c.top - bx.top - 2;
+        const dy = Math.max(22, Math.abs(y2 - y1) / 2);
+        d = `M${x1},${y1} C${x1},${y1 + dy} ${x2},${y2 - dy} ${x2},${y2}`;
+      }
+      const path = document.createElementNS(NS, "path");
+      path.setAttribute("d", d);
+      path.setAttribute("class", "wire");
+      svg.append(path);
+      let text = null;
+      if (e.label) {
+        text = document.createElementNS(NS, "text");
+        text.setAttribute("class", "wire-label");
+        text.setAttribute("x", (x1 + x2) / 2 + (row ? 0 : 8));
+        text.setAttribute("y", (y1 + y2) / 2 + (row ? -7 : 4));
+        text.setAttribute("text-anchor", row ? "middle" : "start");
+        text.textContent = e.label;
+        svg.append(text);
+      }
+      return { e, path, text };
+    });
+    apply(current);
+  };
+
+  const stepper = el("div", "stepper");
+  const prev = el("button", null, "이전"); prev.type = "button";
+  const next = el("button"); next.type = "button";
+  const stepText = el("div", "step-text"); stepText.setAttribute("aria-live", "polite");
+  stepper.append(prev, stepText, next);
+  if (steps.length) box.append(stepper);
+
+  const paint = (onNodes, onEdge) => {
+    for (const n of nodes) {
+      const on = onNodes ? onNodes.has(n.id) : false;
+      nodeEls[n.id].classList.toggle("on", on);
+      nodeEls[n.id].classList.toggle("dim", !!onNodes && !on);
+    }
+    for (const w of wireEls) {
+      const on = onNodes ? onEdge(w.e) : false, dim = !!onNodes && !on;
+      w.path.classList.toggle("on", on); w.path.classList.toggle("dim", dim);
+      w.path.setAttribute("marker-end", `url(#${uid}-${on ? "on" : "off"})`);
+      if (w.text) { w.text.classList.toggle("on", on); w.text.classList.toggle("dim", dim); }
+    }
+  };
+  function apply(i) {
+    current = i;
+    stepText.replaceChildren();
+    if (i < 0) {
+      paint(null);
+      stepText.append(el("span", "num", "전체"), "'따라가기'를 누르면 흐름을 한 단계씩 짚어 드려요.");
+    } else {
+      const focus = new Set(steps[i].focus), before = new Set(i > 0 ? steps[i - 1].focus : []);
+      paint(focus, (e) => (focus.has(e.from) && focus.has(e.to)) || (before.has(e.from) && focus.has(e.to)));
+      stepText.append(el("span", "num", `${i + 1} / ${steps.length}`), steps[i].text);
+    }
+    prev.disabled = i < 0;
+    next.disabled = i >= steps.length - 1;
+    next.textContent = i < 0 ? "따라가기" : "다음";
+  }
+  prev.onclick = () => apply(current - 1);
+  next.onclick = () => apply(current + 1);
+
+  new ResizeObserver(() => {
+    const dir = scroll.clientWidth < 520 ? "col" : "row";
+    if (flow.dataset.dir !== dir) flow.dataset.dir = dir;
+    requestAnimationFrame(draw);
+  }).observe(scroll);
+  apply(-1);
+  return box;
+}
+
+const RENDER = { flow: renderFlow, timeline: renderTimeline, compare: renderCompare, cards: renderCards, callout: renderCallout, text: renderText,
+  stats: (b) => { const box = blockShell(b); box.append(renderStats(b.items)); return box; } };
+
+/* page */
+const head = el("header", "doc-head");
+head.append(el("span", "eyebrow", "문서 정리"), el("h1", null, DATA.title));
+if (DATA.subtitle) head.append(el("p", "subtitle", DATA.subtitle));
+if (DATA.source) {
+  const s = el("div", "source");
+  const name = el("span", null, "원문: ");
+  if (DATA.source.url && /^https:\/\//.test(DATA.source.url)) {
+    const a = el("a", null, DATA.source.name || DATA.source.url);
+    a.href = DATA.source.url; a.target = "_blank"; a.rel = "noopener";
+    name.append(a);
+  } else name.append(DATA.source.name || "");
+  s.append(name);
+  if (DATA.source.date) s.append(el("span", null, "정리한 날: " + DATA.source.date));
+  head.append(s);
+}
+$page.append(head);
+
+if (DATA.tldr || (DATA.keypoints || []).length || (DATA.stats || []).length) {
+  const g = el("section", "glance");
+  const t = el("div", "tldr");
+  t.append(el("p", "label", "한 줄 요약"));
+  if (DATA.tldr) t.append(el("p", "lead", DATA.tldr));
+  if ((DATA.keypoints || []).length) {
+    const ul = el("ul");
+    for (const k of DATA.keypoints) { const li = el("li"); li.innerHTML = inline(k); ul.append(li); }
+    t.append(ul);
+  }
+  g.append(t);
+  if ((DATA.stats || []).length) {
+    const w = el("div", "stats-wrap");
+    w.append(el("p", "label", "핵심 수치"), renderStats(DATA.stats));
+    g.append(w);
+  } else g.style.gridTemplateColumns = "1fr";
+  $page.append(g);
+}
+
+const secs = DATA.sections || [];
+if (secs.length > 1) {
+  const nav = el("nav", "toc");
+  nav.setAttribute("aria-label", "목차");
+  secs.forEach((s, i) => { const a = el("a", null, s.heading); a.href = "#" + (s.id || "s" + (i + 1)); nav.append(a); });
+  $page.append(nav);
+}
+
+secs.forEach((s, i) => {
+  const sec = el("section", "sec");
+  sec.id = s.id || "s" + (i + 1);
+  const h = el("div", "sec-head");
+  h.append(el("span", "sec-num", String(i + 1).padStart(2, "0")), el("h2", null, s.heading));
+  if (s.lead) h.append(el("p", "sec-lead", s.lead));
+  sec.append(h);
+  for (const b of s.blocks || []) {
+    const fn = RENDER[b.type];
+    if (fn) sec.append(fn(b));
+  }
+  $page.append(sec);
+});
+
+const foot = el("footer", "foot");
+foot.append(el("span", null, "원문을 바탕으로 정리한 페이지예요. 수치와 조건은 원문 표현을 따랐고, '원문을 바탕으로 정리' 표시가 있는 그림은 원문 내용을 재구성한 거예요."));
+if (DATA.source && DATA.source.url) foot.append(el("span", null, "정확한 최신 내용은 원문에서 확인하세요."));
+$page.append(foot);
+</script>

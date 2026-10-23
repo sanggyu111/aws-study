@@ -1,0 +1,1049 @@
+<meta charset="utf-8">
+<title>VPC 기본 구조</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column — header, at-a-glance band (TL;DR, key numbers), section map, then sections that each lead with a picture. */
+:root {
+  --bg: #f4f6f8;
+  --paper: #ffffff;
+  --ink: #18212b;
+  --muted: #5a6776;
+  --line: #d6dde5;
+  --accent: #2b5fa8;
+  --accent-soft: #e6eef9;
+  --good: #2f7a55;
+  --bad: #a8433a;
+  --warn: #9a6a12;
+  --warn-soft: #faf1de;
+  --font-display: "Gowun Batang", "Nanum Myeongjo", "AppleMyungjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.8125rem;
+  --step-0: 0.9688rem;
+  --step-1: 1.1875rem;
+  --step-2: 1.5rem;
+  --step-3: 2.125rem;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161c; --paper: #182029; --ink: #e2e8ef; --muted: #95a3b3; --line: #2b3643;
+    --accent: #7eaaf0; --accent-soft: #1d2a3b; --good: #6cc196; --bad: #ec8b80; --warn: #e2b55a; --warn-soft: #2a2416;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161c; --paper: #182029; --ink: #e2e8ef; --muted: #95a3b3; --line: #2b3643;
+  --accent: #7eaaf0; --accent-soft: #1d2a3b; --good: #6cc196; --bad: #ec8b80; --warn: #e2b55a; --warn-soft: #2a2416;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+
+.page { max-width: 920px; margin: 0 auto; padding-block: 40px 64px; display: flex; flex-direction: column; gap: 36px; }
+
+/* header */
+.doc-head { display: flex; flex-direction: column; gap: 10px; }
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.doc-head h1 { font-family: var(--font-display); font-size: var(--step-3); line-height: 1.2; margin: 0; text-wrap: balance; }
+.doc-head .subtitle { margin: 0; color: var(--muted); font-size: var(--step-1); line-height: 1.5; max-width: 60ch; }
+.source { font-size: var(--step--1); color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.source a { overflow-wrap: anywhere; }
+
+/* at a glance */
+.glance { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; }
+.tldr { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+.tldr p.lead { margin: 0; font-size: var(--step-1); line-height: 1.55; font-weight: 500; text-wrap: pretty; }
+.tldr ul { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 4px; }
+.label { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+
+/* section map */
+.toc { display: flex; flex-wrap: wrap; gap: 8px; counter-reset: toc; }
+.toc a {
+  counter-increment: toc;
+  text-decoration: none; color: var(--ink);
+  border: 1px solid var(--line); background: var(--paper);
+  border-radius: 999px; padding: 4px 12px 4px 6px; font-size: var(--step--1);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.toc a::before { content: counter(toc); width: 20px; height: 20px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-size: 0.6875rem; font-weight: 600; }
+.toc a:hover { border-color: var(--accent); }
+
+/* sections */
+.sec { display: flex; flex-direction: column; gap: 16px; scroll-margin-top: 16px; }
+.sec-head { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: baseline; }
+.sec-num { font-family: var(--font-display); font-size: var(--step-2); color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+.sec h2 { font-family: var(--font-display); font-size: var(--step-2); line-height: 1.3; margin: 0; text-wrap: balance; }
+.sec .sec-lead { grid-column: 2; margin: 0; color: var(--muted); }
+
+.block { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; container-type: inline-size; }
+.block-title { font-weight: 600; font-size: var(--step-0); margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.derived { font-size: 0.6875rem; font-weight: 500; color: var(--muted); border: 1px dashed var(--line); border-radius: 4px; padding: 0 6px; }
+.block.text-block { background: transparent; border: none; padding: 0; }
+.md p { margin: 0 0 0.6em; }
+.md p:last-child, .md ul:last-child, .md ol:last-child { margin-bottom: 0; }
+.md ul, .md ol { margin: 0 0 0.6em; padding-left: 1.2em; }
+.md code { font-family: var(--font-mono); font-size: 0.86em; background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; }
+
+/* stats */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.stat { display: flex; flex-direction: column; gap: 2px; padding: 4px 0; border-top: 3px solid var(--accent); }
+.stat .v { font-family: var(--font-display); font-size: var(--step-3); font-weight: 700; line-height: 1.1; color: var(--accent); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat .l { font-weight: 600; font-size: var(--step--1); }
+.stat .n { color: var(--muted); font-size: 0.75rem; line-height: 1.45; }
+.glance .stats { grid-template-columns: 1fr 1fr; align-content: start; }
+.glance .stats-wrap { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+
+/* cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.card .tag { align-self: flex-start; font-size: 0.6875rem; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 4px; padding: 0 6px; }
+.card b { font-size: var(--step-0); line-height: 1.4; }
+.card span.t { color: var(--muted); font-size: var(--step--1); line-height: 1.55; }
+
+/* compare */
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); }
+th, td { padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+thead th { font-weight: 600; color: var(--muted); font-size: 0.75rem; letter-spacing: 0.03em; white-space: nowrap; }
+tbody th { font-weight: 600; }
+td.hl, th.hl { background: var(--accent-soft); }
+thead th.hl { color: var(--accent); }
+.yes { color: var(--good); font-weight: 700; }
+.no { color: var(--bad); font-weight: 700; }
+
+/* callout */
+.callout { border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 10px 10px 0; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; }
+.callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+.callout .label { color: var(--accent); }
+.callout.warn .label { color: var(--warn); }
+
+/* timeline */
+.timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.tl { position: relative; padding: 0 0 18px 34px; display: flex; flex-direction: column; gap: 2px; }
+.tl::before { content: ""; position: absolute; left: 10px; top: 22px; bottom: 0; width: 2px; background: var(--line); }
+.tl:last-child { padding-bottom: 0; }
+.tl:last-child::before { display: none; }
+.tl .dot { position: absolute; left: 2px; top: 4px; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); background: var(--paper); }
+.tl[data-status="done"] .dot { border-color: var(--accent); background: var(--accent); }
+.tl[data-status="now"] .dot { border-color: var(--accent); background: var(--paper); box-shadow: 0 0 0 4px var(--accent-soft); }
+.tl[data-status="now"] .dot::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent); }
+.tl .when { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); }
+.tl[data-status="now"] .when { color: var(--accent); font-weight: 500; }
+.tl b { line-height: 1.4; }
+.tl span.t { color: var(--muted); font-size: var(--step--1); }
+
+/* flow with step-through */
+.flow-scroll { overflow-x: auto; min-width: 0; }
+.flow { position: relative; display: flex; gap: 56px; align-items: center; width: max-content; min-width: 100%; justify-content: center; padding: 10px 4px; }
+.flow[data-dir="col"] { flex-direction: column; gap: 44px; width: 100%; }
+.flow .rank { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 14px; }
+.flow[data-dir="col"] .rank { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+.wires { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: visible; }
+.wire { fill: none; stroke: var(--line); stroke-width: 1.75; transition: stroke 0.2s, opacity 0.2s; }
+.wire.on { stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: 7 5; }
+.wire.dim, .wire-label.dim { opacity: 0.3; }
+.wire-label { font-family: var(--font-body); font-size: 11px; fill: var(--muted); paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; }
+.wire-label.on { fill: var(--accent); font-weight: 600; }
+.arrow-head { fill: var(--line); }
+.arrow-head.on { fill: var(--accent); }
+@media (prefers-reduced-motion: no-preference) {
+  .wire.on { animation: wire-run 0.9s linear infinite; }
+  @keyframes wire-run { to { stroke-dashoffset: -12; } }
+}
+.node {
+  position: relative; width: 152px;
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: 10px;
+  padding: 8px 10px 9px; display: flex; flex-direction: column; gap: 2px;
+  transition: border-color 0.2s, opacity 0.2s, box-shadow 0.2s;
+}
+.node[data-kind="store"] { border-style: double; border-width: 3px; }
+.node[data-kind="output"] { border-radius: 10px 10px 18px 18px; }
+.node[data-kind="input"] { border-radius: 18px 10px 10px 18px; }
+.node[data-kind="decision"] { border-style: dashed; }
+.node .kind { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; color: var(--muted); }
+.node b { font-size: var(--step--1); line-height: 1.35; overflow-wrap: anywhere; }
+.node small { font-size: 0.75rem; color: var(--muted); line-height: 1.4; overflow-wrap: anywhere; }
+.node .badge {
+  position: absolute; top: -9px; right: -9px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+  background: var(--paper); border: 1.5px solid var(--line); color: var(--muted);
+  font-size: 0.6875rem; font-weight: 600; display: grid; place-items: center; font-variant-numeric: tabular-nums;
+}
+.node.on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.node.on .kind, .node.on .badge { color: var(--accent); border-color: var(--accent); }
+.node.dim { opacity: 0.35; }
+.stepper { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; border-top: 1px solid var(--line); padding-top: 12px; }
+.stepper button { border: 1px solid var(--line); background: var(--paper); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: var(--step--1); white-space: nowrap; }
+.stepper button:hover:not([disabled]) { border-color: var(--accent); color: var(--accent); }
+.stepper button[disabled] { opacity: 0.4; cursor: default; }
+.step-text { font-size: var(--step--1); line-height: 1.55; min-width: 0; }
+.step-text .num { display: inline-block; font-weight: 600; color: var(--accent); margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+.foot { border-top: 1px solid var(--line); padding-top: 16px; font-size: 0.75rem; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+
+@media (max-width: 720px) {
+  .page { padding-block: 24px 48px; gap: 28px; }
+  .glance { grid-template-columns: 1fr; }
+  .stepper { grid-template-columns: 1fr 1fr; }
+  .stepper .step-text { grid-column: 1 / -1; grid-row: 1; }
+}
+</style>
+
+<div class="page" id="page"></div>
+
+<!-- Replace this whole JSON block with the document's data. Write "</" inside strings as "<\/". Schema: references/blocks.md -->
+<script id="doc-data" type="application/json">
+{
+  "title": "VPC 기본 구조",
+  "subtitle": "VPC, 서브넷, 라우팅 테이블, 인터넷 게이트웨이가 어떻게 맞물려 인터넷 패킷을 인스턴스까지 데려오는지 정리",
+  "source": {
+    "name": "How Amazon VPC works (Amazon VPC User Guide)",
+    "url": "https://docs.aws.amazon.com/vpc/latest/userguide/how-it-works.html",
+    "date": "2026-10-22"
+  },
+  "tldr": "서브넷이 퍼블릭인지 프라이빗인지는 이름이 아니라 연결된 라우팅 테이블(route table)에 인터넷 게이트웨이(internet gateway)로 가는 경로가 있느냐로 정해진다. 인터넷에서 인스턴스에 닿으려면 IGW 연결 + 0.0.0.0/0 경로 + 퍼블릭 IPv4 주소, 세 가지가 모두 필요하다.",
+  "keypoints": [
+    "VPC는 내 AWS 계정 전용으로 논리적으로 격리된 가상 네트워크, 서브넷은 그 안의 IP 주소 범위다.",
+    "라우팅 테이블의 각 경로는 목적지(destination)와 대상(target)으로 이루어진다.",
+    "IGW로 가는 경로가 있는 라우팅 테이블에 연결되면 퍼블릭 서브넷(public subnet), 없으면 프라이빗 서브넷(private subnet)이다.",
+    "직접 만든 VPC(nondefault VPC)에는 IGW, IGW 경로, 퍼블릭 IPv4 자동 할당이 모두 없다. 직접 만들어야 한다.",
+    "IGW는 인스턴스 대신 1:1 NAT를 해 준다. 인스턴스 자신은 프라이빗 IP만 안다."
+  ],
+  "stats": [
+    {
+      "value": "0.0.0.0/0",
+      "label": "IPv4 인터넷 경로의 목적지",
+      "note": "라우팅 테이블이 모르는 모든 목적지 (IPv6는 ::/0)"
+    },
+    {
+      "value": "1:1 NAT",
+      "label": "IGW가 해 주는 주소 변환",
+      "note": "프라이빗 IPv4 ↔ 퍼블릭 IPv4 / Elastic IP"
+    },
+    {
+      "value": "No charge",
+      "label": "인터넷 게이트웨이 요금",
+      "note": "단, IGW를 쓰는 EC2의 데이터 전송 요금은 있음"
+    }
+  ],
+  "sections": [
+    {
+      "id": "building-blocks",
+      "heading": "1. VPC를 이루는 네 가지 부품",
+      "lead": "VPC 안에 서브넷을 나누고, 라우팅 테이블로 길을 정하고, 인터넷 게이트웨이로 바깥과 잇는다.",
+      "blocks": [
+        {
+          "type": "cards",
+          "items": [
+            {
+              "tag": "네트워크",
+              "title": "VPC (virtual private cloud)",
+              "text": "내 AWS 계정 전용 가상 네트워크. AWS Cloud의 다른 가상 네트워크와 논리적으로 격리되어 있고, IP 주소 범위를 직접 정한다."
+            },
+            {
+              "tag": "구역",
+              "title": "서브넷 (subnet)",
+              "text": "VPC 안의 IP 주소 범위. EC2 인스턴스 같은 리소스는 서브넷 안에 띄운다."
+            },
+            {
+              "tag": "길 안내",
+              "title": "라우팅 테이블 (route table)",
+              "text": "VPC에서 나가는 트래픽을 어디로 보낼지 정하는 규칙(route)의 모음. 서브넷마다 하나가 연결된다."
+            },
+            {
+              "tag": "출입문",
+              "title": "인터넷 게이트웨이 (internet gateway)",
+              "text": "VPC와 인터넷 사이의 통신을 허용하는 구성 요소. 수평 확장되고 이중화된 고가용성 부품이라 대역폭 제약이 생기지 않는다."
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "md": "콘솔의 **Create VPC** 화면에서 VPC와 다른 네트워킹 리소스를 함께 만들도록 고르면 **Preview** 창에 이 부품들이 연결된 그림이 나오고, 이미 만든 VPC는 **Resource map** 탭에서 같은 그림을 볼 수 있다. 인터넷 게이트웨이의 자세한 동작은 두 번째 원문 [Enable internet access for a VPC using an internet gateway](https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html)를 함께 참고했다."
+        }
+      ]
+    },
+    {
+      "id": "public-vs-private",
+      "heading": "2. 퍼블릭 서브넷과 프라이빗 서브넷은 무엇이 다른가",
+      "lead": "차이는 딱 하나, 연결된 라우팅 테이블에 IGW로 가는 경로가 있느냐다.",
+      "blocks": [
+        {
+          "type": "flow",
+          "title": "이 서브넷은 퍼블릭일까, 프라이빗일까",
+          "derived": true,
+          "nodes": [
+            {
+              "id": "subnet",
+              "label": "서브넷",
+              "kind": "input",
+              "note": "VPC 안의 IP 주소 범위"
+            },
+            {
+              "id": "rt",
+              "label": "연결된 라우팅 테이블",
+              "kind": "store",
+              "note": "명시적 연결이 없으면 메인 라우팅 테이블"
+            },
+            {
+              "id": "q",
+              "label": "IGW 경로가 있나?",
+              "kind": "decision",
+              "note": "예: 0.0.0.0/0 → igw-..."
+            },
+            {
+              "id": "pub",
+              "label": "퍼블릭 서브넷",
+              "kind": "output",
+              "note": "EC2 웹 서버(Next.js)를 둘 곳"
+            },
+            {
+              "id": "priv",
+              "label": "프라이빗 서브넷",
+              "kind": "output",
+              "note": "RDS DB를 둘 곳"
+            }
+          ],
+          "edges": [
+            {
+              "from": "subnet",
+              "to": "rt",
+              "label": "연결"
+            },
+            {
+              "from": "rt",
+              "to": "q",
+              "label": "경로 확인"
+            },
+            {
+              "from": "q",
+              "to": "pub",
+              "label": "있음"
+            },
+            {
+              "from": "q",
+              "to": "priv",
+              "label": "없음"
+            }
+          ],
+          "steps": [
+            {
+              "focus": [
+                "subnet",
+                "rt"
+              ],
+              "text": "서브넷은 반드시 라우팅 테이블 하나와 연결된다. 직접 연결하지 않으면 메인 라우팅 테이블(main route table)에 암묵적으로 연결되므로, 메인 테이블에 무엇이 들어 있는지가 중요하다."
+            },
+            {
+              "focus": [
+                "q"
+              ],
+              "text": "판단 기준은 서브넷 이름이 아니라 라우팅 테이블의 경로다. 콘솔에서 서브넷 이름에 \"public\"을 붙여도 IGW 경로가 없으면 프라이빗이다."
+            },
+            {
+              "focus": [
+                "pub"
+              ],
+              "text": "IGW로 가는 경로가 있으면 퍼블릭 서브넷. 여기 있는 인스턴스에 퍼블릭 IP가 있으면 인터넷과 통신할 수 있다. 내 EC2(Next.js 서버)를 이곳에 둔다."
+            },
+            {
+              "focus": [
+                "priv"
+              ],
+              "text": "IGW 경로가 없으면 프라이빗 서브넷. 인스턴스에 퍼블릭 IP가 있어도 인터넷과 통신할 수 없다. 외부에서 직접 닿으면 안 되는 RDS DB를 이곳에 둔다."
+            }
+          ]
+        },
+        {
+          "type": "compare",
+          "derived": true,
+          "columns": [
+            "기준",
+            "퍼블릭 서브넷 (public subnet)",
+            "프라이빗 서브넷 (private subnet)"
+          ],
+          "rows": [
+            [
+              "라우팅 테이블에 IGW 경로",
+              "예",
+              "아니오"
+            ],
+            [
+              "퍼블릭 IP가 있을 때 인터넷 통신",
+              "가능",
+              "불가"
+            ],
+            [
+              "인터넷에서 먼저 연결 시작",
+              "가능 (퍼블릭 IPv4 / IPv6 주소로)",
+              "불가"
+            ],
+            [
+              "밖으로 나가는 연결만 필요할 때",
+              "IGW로 직접",
+              "NAT 장치(NAT device) 경유"
+            ],
+            [
+              "내 학습 경로에서 둘 것",
+              "EC2 + Next.js",
+              "RDS DB"
+            ]
+          ]
+        },
+        {
+          "type": "callout",
+          "tone": "warn",
+          "title": "주의",
+          "text": "IGW 경로가 없는 서브넷의 인스턴스는 **퍼블릭 IP 주소가 있어도** 인터넷과 통신할 수 없다. 반대로 IGW 경로가 있어도 인스턴스에 퍼블릭 IPv4 주소나 Elastic IP가 없으면 인터넷과 통신할 수 없다."
+        }
+      ]
+    },
+    {
+      "id": "route-tables",
+      "heading": "3. 라우팅 테이블은 어떻게 길을 정하나",
+      "lead": "경로 하나는 '어디로 가는 트래픽을(destination) 어디로 보낼지(target)'를 적은 한 줄이다.",
+      "blocks": [
+        {
+          "type": "compare",
+          "title": "퍼블릭 서브넷용 라우팅 테이블에 넣는 경로 예",
+          "derived": true,
+          "columns": [
+            "목적지 (Destination)",
+            "대상 (Target)",
+            "의미"
+          ],
+          "rows": [
+            [
+              "0.0.0.0/0",
+              "인터넷 게이트웨이 (igw-...)",
+              "라우팅 테이블이 따로 모르는 모든 IPv4 목적지를 IGW로"
+            ],
+            [
+              "::/0",
+              "인터넷 게이트웨이 (igw-...)",
+              "같은 의미의 IPv6 경로. IPv6는 IPv4와 별도 경로가 필요"
+            ],
+            [
+              "더 좁은 범위 (예: 회사 공인 IPv4)",
+              "인터넷 게이트웨이 (igw-...)",
+              "0.0.0.0/0 대신 특정 주소 범위만 IGW로 보내도록 좁힐 수 있음"
+            ]
+          ]
+        },
+        {
+          "type": "cards",
+          "items": [
+            {
+              "tag": "연결 방식",
+              "title": "명시적 연결 (explicitly associate)",
+              "text": "서브넷을 특정 라우팅 테이블에 직접 연결한다. 퍼블릭/프라이빗용 테이블을 따로 만들어 각각 연결하는 것이 기본 패턴이다."
+            },
+            {
+              "tag": "연결 방식",
+              "title": "암묵적 연결 (main route table)",
+              "text": "직접 연결하지 않은 서브넷은 자동으로 메인 라우팅 테이블을 따른다."
+            }
+          ]
+        },
+        {
+          "type": "callout",
+          "tone": "info",
+          "title": "덧붙임",
+          "text": "원문 이 페이지에는 나오지 않지만, 모든 라우팅 테이블에는 VPC CIDR을 목적지로 하는 `local` 경로가 기본으로 들어 있어 같은 VPC 안의 서브넷끼리(예: EC2 → RDS)는 IGW 없이 통신한다. 원문도 \"nondefault 서브넷 인스턴스끼리는 서로 통신할 수 있다\"고 적고 있다."
+        }
+      ]
+    },
+    {
+      "id": "packet-path",
+      "heading": "4. 인터넷의 패킷은 어떻게 EC2까지 오나",
+      "lead": "내 PC가 보낸 패킷은 퍼블릭 IP를 향해 IGW에 닿고, IGW가 주소를 프라이빗 IP로 바꿔 서브넷 안 인스턴스에 전달한다.",
+      "blocks": [
+        {
+          "type": "flow",
+          "title": "내 PC → 퍼블릭 서브넷의 EC2 (IPv4)",
+          "derived": true,
+          "nodes": [
+            {
+              "id": "pc",
+              "label": "내 PC (인터넷)",
+              "kind": "input",
+              "note": "EC2의 퍼블릭 IPv4 / Elastic IP로 접속"
+            },
+            {
+              "id": "igw",
+              "label": "인터넷 게이트웨이",
+              "kind": "process",
+              "note": "VPC에 연결(attach)되어 있어야 함"
+            },
+            {
+              "id": "nat",
+              "label": "1:1 NAT 변환",
+              "kind": "process",
+              "note": "목적지: 퍼블릭 IP → 프라이빗 IPv4"
+            },
+            {
+              "id": "vpc",
+              "label": "VPC / 퍼블릭 서브넷",
+              "kind": "store",
+              "note": "IGW 경로가 있는 라우팅 테이블에 연결"
+            },
+            {
+              "id": "ec2",
+              "label": "EC2 인스턴스",
+              "kind": "output",
+              "note": "자신의 프라이빗 IP만 알고 있음"
+            },
+            {
+              "id": "reply",
+              "label": "응답 패킷",
+              "kind": "output",
+              "note": "0.0.0.0/0 경로로 IGW, 출발지는 퍼블릭 IP로"
+            }
+          ],
+          "edges": [
+            {
+              "from": "pc",
+              "to": "igw",
+              "label": "요청"
+            },
+            {
+              "from": "igw",
+              "to": "nat",
+              "label": "주소 변환"
+            },
+            {
+              "from": "nat",
+              "to": "vpc",
+              "label": "전달"
+            },
+            {
+              "from": "vpc",
+              "to": "ec2",
+              "label": "도착"
+            },
+            {
+              "from": "ec2",
+              "to": "reply",
+              "label": "응답"
+            }
+          ],
+          "steps": [
+            {
+              "focus": [
+                "pc"
+              ],
+              "text": "인터넷 쪽에서는 인스턴스의 퍼블릭 IPv4 주소(또는 Elastic IP)로만 연결을 시작할 수 있다. nondefault 서브넷은 퍼블릭 IPv4를 자동으로 주지 않으므로, 실행 시 직접 할당하거나 서브넷 속성을 바꾸거나 Elastic IP를 연결해야 한다."
+            },
+            {
+              "focus": [
+                "igw"
+              ],
+              "text": "패킷은 Amazon EC2 network edge를 거쳐 인터넷 게이트웨이로 들어온다. IGW를 쓰려면 반드시 VPC에 연결(attach)하고 라우팅을 설정해야 한다."
+            },
+            {
+              "focus": [
+                "nat"
+              ],
+              "text": "IGW가 인스턴스를 대신해 1:1 NAT를 수행해, 퍼블릭 IPv4 / Elastic IP로 향하던 목적지 주소를 인스턴스의 프라이빗 IPv4 주소로 바꾼 뒤 VPC로 넘긴다."
+            },
+            {
+              "focus": [
+                "vpc",
+                "ec2"
+              ],
+              "text": "패킷이 퍼블릭 서브넷의 EC2에 도착한다. 인스턴스는 VPC와 서브넷 안의 프라이빗 IP 주소 공간만 알고 있다."
+            },
+            {
+              "focus": [
+                "ec2",
+                "reply"
+              ],
+              "text": "응답은 서브넷 라우팅 테이블의 0.0.0.0/0 경로를 따라 IGW로 나가고, IGW가 응답 주소를 프라이빗 IP가 아니라 퍼블릭 IPv4 / Elastic IP로 바꿔 인터넷으로 보낸다. 이 경로가 없으면 응답이 돌아가지 못한다."
+            }
+          ]
+        },
+        {
+          "type": "callout",
+          "tone": "info",
+          "title": "덧붙임",
+          "text": "이 두 원문은 '길'(라우팅)만 다룬다. **내 IP에서만 접속 허용**은 길이 아니라 문지기 역할인 보안 그룹(security group)의 인바운드 규칙(inbound rules)에서 소스를 `My IP`로 정해 처리하고, **거부된 접속 기록**은 VPC 흐름 로그(VPC Flow Logs)를 `Reject` 필터로 켜서 남긴다. 둘 다 다음 단계에서 따로 다룰 주제다."
+        }
+      ]
+    },
+    {
+      "id": "default-vs-custom",
+      "heading": "5. 기본 VPC와 직접 만든 VPC: 무엇을 내가 만들어야 하나",
+      "lead": "기본 VPC는 인터넷 접속 준비가 끝나 있지만, 직접 만든 VPC는 IGW부터 하나씩 채워야 한다.",
+      "blocks": [
+        {
+          "type": "compare",
+          "title": "IPv4/IPv6 인터넷 접속에 필요한 구성 요소가 자동으로 있나 (IGW 문서의 표)",
+          "highlight": 2,
+          "columns": [
+            "구성 요소 (Component)",
+            "기본 VPC (Default VPC)",
+            "직접 만든 VPC (Nondefault VPC)"
+          ],
+          "rows": [
+            [
+              "인터넷 게이트웨이 (Internet gateway)",
+              "예",
+              "아니오"
+            ],
+            [
+              "IGW로 가는 IPv4 경로(0.0.0.0/0)가 있는 라우팅 테이블",
+              "예",
+              "아니오"
+            ],
+            [
+              "IGW로 가는 IPv6 경로(::/0)가 있는 라우팅 테이블",
+              "아니오",
+              "아니오"
+            ],
+            [
+              "서브넷에 띄운 인스턴스에 퍼블릭 IPv4 자동 할당",
+              "Yes (default subnet)",
+              "No (nondefault subnet)"
+            ],
+            [
+              "서브넷에 띄운 인스턴스에 IPv6 자동 할당",
+              "No (default subnet)",
+              "No (nondefault subnet)"
+            ]
+          ]
+        },
+        {
+          "type": "timeline",
+          "title": "직접 만든 VPC에서 EC2를 인터넷에 잇는 순서",
+          "derived": true,
+          "items": [
+            {
+              "when": "1",
+              "title": "VPC와 서브넷 만들기",
+              "text": "IP 주소 범위를 정하고 퍼블릭용·프라이빗용 서브넷을 나눈다.",
+              "status": "next"
+            },
+            {
+              "when": "2",
+              "title": "인터넷 게이트웨이 만들고 VPC에 연결(attach)",
+              "text": "nondefault VPC에는 IGW가 없다.",
+              "status": "next"
+            },
+            {
+              "when": "3",
+              "title": "퍼블릭 서브넷 라우팅 테이블에 0.0.0.0/0 → IGW 경로 추가",
+              "text": "그리고 퍼블릭 서브넷을 이 테이블에 명시적으로 연결한다. 프라이빗 서브넷 테이블에는 넣지 않는다.",
+              "status": "next"
+            },
+            {
+              "when": "4",
+              "title": "EC2에 퍼블릭 IPv4 주소 또는 Elastic IP 부여",
+              "text": "실행 시 할당, 서브넷의 퍼블릭 IP 속성 변경, Elastic IP 연결 중 하나.",
+              "status": "next"
+            }
+          ]
+        },
+        {
+          "type": "callout",
+          "tone": "warn",
+          "title": "주의",
+          "text": "기본 VPC는 2013년 12월 4일(December 4, 2013) 이후 만든 계정에 리전마다 있고, 서브넷을 지정하지 않고 EC2를 띄우면 기본 서브넷 중 하나에 자동으로 들어간다. 직접 만든 VPC를 쓰려면 실행할 때 **VPC와 서브넷을 꼭 직접 고른다.**"
+        }
+      ]
+    },
+    {
+      "id": "private-outbound",
+      "heading": "6. 프라이빗 서브넷에서 밖으로 나가야 할 때",
+      "lead": "인터넷에서 들어오는 연결은 막고, 안에서 나가는 연결만 허용하려면 NAT 장치를 쓴다.",
+      "blocks": [
+        {
+          "type": "cards",
+          "items": [
+            {
+              "tag": "IPv4",
+              "title": "NAT 장치 (NAT device)",
+              "text": "여러 프라이빗 IPv4 주소를 하나의 퍼블릭 IPv4 주소로 매핑한다. Elastic IP를 달고 IGW를 통해 인터넷에 연결되며, 요청하지 않은 인바운드 연결은 막는다."
+            },
+            {
+              "tag": "IPv6",
+              "title": "송신 전용 인터넷 게이트웨이 (egress-only internet gateway)",
+              "text": "IPv6로 밖으로 나가는 연결만 시작할 수 있게 한다."
+            },
+            {
+              "tag": "기본 상태",
+              "title": "아무것도 없을 때",
+              "text": "nondefault 서브넷의 인스턴스는 서로 통신할 수는 있지만 인터넷에는 접근할 수 없다."
+            }
+          ]
+        },
+        {
+          "type": "callout",
+          "tone": "info",
+          "title": "덧붙임",
+          "text": "RDS DB는 같은 VPC의 EC2(Next.js)에서만 접속하면 되므로, 프라이빗 서브넷에 두고 IGW 경로를 주지 않는 것이 이 구조의 핵심이다. NAT 장치는 프라이빗 서브넷의 인스턴스가 밖으로 나가야 할 때만 필요하며, 요금이 없는 IGW와 달리 NAT 게이트웨이(NAT gateway)는 사용 요금이 붙는다(원문 외 정보)."
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<script>
+const DATA = JSON.parse(document.getElementById("doc-data").textContent);
+const $page = document.getElementById("page");
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+/* minimal markdown: escaped text, **bold**, `code`, https links, - lists, paragraphs */
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function inline(s) {
+  return String(s).split(/(`[^`]+`)/g).map((p) => /^`[^`]+`$/.test(p) ? "<code>" + esc(p.slice(1, -1)) + "</code>" :
+    esc(p).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/\[([^\]]+)\]\((https:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')).join("");
+}
+function md(src) {
+  const out = []; let para = [], list = [];
+  const flush = () => {
+    if (para.length) { out.push("<p>" + para.map(inline).join("<br>") + "</p>"); para = []; }
+    if (list.length) { out.push("<ul>" + list.map((i) => "<li>" + inline(i) + "</li>").join("") + "</ul>"); list = []; }
+  };
+  for (const line of String(src).split("\n")) {
+    const m = line.match(/^\s*[-*]\s+(.*)/);
+    if (m) { if (para.length) { out.push("<p>" + para.map(inline).join("<br>") + "</p>"); para = []; } list.push(m[1]); }
+    else if (!line.trim()) flush();
+    else { if (list.length) flush(); para.push(line); }
+  }
+  flush();
+  return out.join("");
+}
+
+function blockShell(b, extraClass) {
+  const box = el("div", "block" + (extraClass ? " " + extraClass : ""));
+  if (b.title || b.derived) {
+    const t = el("p", "block-title", b.title || "");
+    if (b.derived) t.append(el("span", "derived", "원문을 바탕으로 정리"));
+    box.append(t);
+  }
+  return box;
+}
+
+function renderStats(items) {
+  const g = el("div", "stats");
+  for (const s of items || []) {
+    const c = el("div", "stat");
+    c.append(el("span", "v", s.value), el("span", "l", s.label));
+    if (s.note) c.append(el("span", "n", s.note));
+    g.append(c);
+  }
+  return g;
+}
+
+function renderCards(b) {
+  const box = blockShell(b);
+  const g = el("div", "cards");
+  for (const c of b.items || []) {
+    const card = el("div", "card");
+    if (c.tag) card.append(el("span", "tag", c.tag));
+    card.append(el("b", null, c.title));
+    if (c.text) card.append(el("span", "t", c.text));
+    g.append(card);
+  }
+  box.append(g);
+  return box;
+}
+
+function cell(tag, v, hl) {
+  const c = el(tag, hl ? "hl" : null);
+  const s = String(v ?? "");
+  if (/^(✓|O|o|예|가능)$/.test(s)) c.append(el("span", "yes", "✓"));
+  else if (/^(✗|X|x|아니오|불가)$/.test(s)) c.append(el("span", "no", "✗"));
+  else c.textContent = s;
+  return c;
+}
+function renderCompare(b) {
+  const box = blockShell(b);
+  const wrap = el("div", "tbl");
+  const t = el("table");
+  const hl = Number.isInteger(b.highlight) ? b.highlight : -1;
+  const thead = el("thead"), tr = el("tr");
+  (b.columns || []).forEach((c, i) => { const th = el("th", i === hl ? "hl" : null, c); th.scope = "col"; tr.append(th); });
+  thead.append(tr);
+  const tbody = el("tbody");
+  for (const row of b.rows || []) {
+    const r = el("tr");
+    row.forEach((v, i) => { const c = cell(i === 0 ? "th" : "td", v, i === hl); if (i === 0) { c.scope = "row"; c.textContent = String(v); } r.append(c); });
+    tbody.append(r);
+  }
+  t.append(thead, tbody);
+  wrap.append(t);
+  box.append(wrap);
+  return box;
+}
+
+function renderCallout(b) {
+  const c = el("div", "callout" + (b.tone === "warn" ? " warn" : ""));
+  c.append(el("p", "label", b.title || (b.tone === "warn" ? "주의" : "참고")));
+  const body = el("div", "md");
+  body.innerHTML = md(b.text || "");
+  c.append(body);
+  return c;
+}
+
+function renderTimeline(b) {
+  const box = blockShell(b);
+  const ol = el("ol", "timeline");
+  for (const it of b.items || []) {
+    const li = el("li", "tl");
+    li.dataset.status = ["done", "now", "next"].includes(it.status) ? it.status : "next";
+    li.append(el("span", "dot"));
+    if (it.when) li.append(el("span", "when", it.when));
+    li.append(el("b", null, it.title));
+    if (it.text) li.append(el("span", "t", it.text));
+    ol.append(li);
+  }
+  box.append(ol);
+  return box;
+}
+
+function renderText(b) {
+  const box = blockShell(b, b.title || b.derived ? "" : "text-block");
+  const d = el("div", "md");
+  d.innerHTML = md(b.md || "");
+  box.append(d);
+  return box;
+}
+
+/* flow: longest-path ranks left → right, SVG wires, step-through highlighting */
+const KIND = { input: "입력", process: "처리", store: "저장", output: "결과", concept: "개념", decision: "판단" };
+let flowSeq = 0;
+function renderFlow(b) {
+  const box = blockShell(b);
+  const uid = "f" + ++flowSeq;
+  const nodes = (b.nodes || []).filter((n) => n && n.id && n.label);
+  const ids = new Set(nodes.map((n) => n.id));
+  const edges = (b.edges || []).filter((e) => ids.has(e.from) && ids.has(e.to) && e.from !== e.to);
+  const steps = (b.steps || []).filter((s) => s && s.text).map((s) => ({ focus: (s.focus || []).filter((x) => ids.has(x)), text: s.text }));
+
+  const rank = Object.fromEntries(nodes.map((n) => [n.id, 0]));
+  for (let k = 0; k < nodes.length; k++) {
+    let changed = false;
+    for (const e of edges) if (rank[e.from] + 1 > rank[e.to] && rank[e.from] + 1 < nodes.length) { rank[e.to] = rank[e.from] + 1; changed = true; }
+    if (!changed) break;
+  }
+  const firstStep = {};
+  steps.forEach((s, i) => s.focus.forEach((id) => { if (!(id in firstStep)) firstStep[id] = i; }));
+
+  const scroll = el("div", "flow-scroll");
+  const flow = el("div", "flow");
+  flow.dataset.dir = "row";
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.classList.add("wires");
+  svg.setAttribute("aria-hidden", "true");
+  flow.append(svg);
+
+  const nodeEls = {};
+  const maxRank = Math.max(0, ...Object.values(rank));
+  for (let r = 0; r <= maxRank; r++) {
+    const col = el("div", "rank");
+    for (const n of nodes.filter((n) => rank[n.id] === r)) {
+      const ne = el("div", "node");
+      ne.dataset.kind = KIND[n.kind] ? n.kind : "concept";
+      ne.append(el("span", "kind", KIND[ne.dataset.kind]), el("b", null, n.label));
+      if (n.note) ne.append(el("small", null, n.note));
+      if (n.id in firstStep) ne.append(el("span", "badge", String(firstStep[n.id] + 1)));
+      nodeEls[n.id] = ne;
+      col.append(ne);
+    }
+    if (col.childElementCount) flow.append(col);
+  }
+  scroll.append(flow);
+  box.append(scroll);
+
+  let wireEls = [], current = -1;
+  const draw = () => {
+    const bx = flow.getBoundingClientRect();
+    if (!bx.width) return;
+    const row = flow.dataset.dir === "row";
+    svg.setAttribute("viewBox", `0 0 ${bx.width} ${bx.height}`);
+    svg.setAttribute("width", bx.width);
+    svg.setAttribute("height", bx.height);
+    svg.replaceChildren();
+    const defs = document.createElementNS(NS, "defs");
+    for (const k of ["off", "on"]) {
+      const mk = document.createElementNS(NS, "marker");
+      mk.setAttribute("id", `${uid}-${k}`);
+      mk.setAttribute("viewBox", "0 0 10 10");
+      mk.setAttribute("refX", "9"); mk.setAttribute("refY", "5");
+      mk.setAttribute("markerWidth", "7"); mk.setAttribute("markerHeight", "7");
+      mk.setAttribute("markerUnits", "userSpaceOnUse");
+      mk.setAttribute("orient", "auto");
+      const p = document.createElementNS(NS, "path");
+      p.setAttribute("d", "M0,0 L10,5 L0,10 z");
+      p.setAttribute("class", "arrow-head" + (k === "on" ? " on" : ""));
+      mk.append(p);
+      defs.append(mk);
+    }
+    svg.append(defs);
+    wireEls = edges.map((e) => {
+      const a = nodeEls[e.from].getBoundingClientRect(), c = nodeEls[e.to].getBoundingClientRect();
+      let x1, y1, x2, y2, d;
+      if (row) {
+        x1 = a.right - bx.left; y1 = a.top + a.height / 2 - bx.top;
+        x2 = c.left - bx.left - 2; y2 = c.top + c.height / 2 - bx.top;
+        const dx = Math.max(28, Math.abs(x2 - x1) / 2);
+        d = `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
+      } else {
+        x1 = a.left + a.width / 2 - bx.left; y1 = a.bottom - bx.top;
+        x2 = c.left + c.width / 2 - bx.left; y2 = c.top - bx.top - 2;
+        const dy = Math.max(22, Math.abs(y2 - y1) / 2);
+        d = `M${x1},${y1} C${x1},${y1 + dy} ${x2},${y2 - dy} ${x2},${y2}`;
+      }
+      const path = document.createElementNS(NS, "path");
+      path.setAttribute("d", d);
+      path.setAttribute("class", "wire");
+      svg.append(path);
+      let text = null;
+      if (e.label) {
+        text = document.createElementNS(NS, "text");
+        text.setAttribute("class", "wire-label");
+        text.setAttribute("x", (x1 + x2) / 2 + (row ? 0 : 8));
+        text.setAttribute("y", (y1 + y2) / 2 + (row ? -7 : 4));
+        text.setAttribute("text-anchor", row ? "middle" : "start");
+        text.textContent = e.label;
+        svg.append(text);
+      }
+      return { e, path, text };
+    });
+    apply(current);
+  };
+
+  const stepper = el("div", "stepper");
+  const prev = el("button", null, "이전"); prev.type = "button";
+  const next = el("button"); next.type = "button";
+  const stepText = el("div", "step-text"); stepText.setAttribute("aria-live", "polite");
+  stepper.append(prev, stepText, next);
+  if (steps.length) box.append(stepper);
+
+  const paint = (onNodes, onEdge) => {
+    for (const n of nodes) {
+      const on = onNodes ? onNodes.has(n.id) : false;
+      nodeEls[n.id].classList.toggle("on", on);
+      nodeEls[n.id].classList.toggle("dim", !!onNodes && !on);
+    }
+    for (const w of wireEls) {
+      const on = onNodes ? onEdge(w.e) : false, dim = !!onNodes && !on;
+      w.path.classList.toggle("on", on); w.path.classList.toggle("dim", dim);
+      w.path.setAttribute("marker-end", `url(#${uid}-${on ? "on" : "off"})`);
+      if (w.text) { w.text.classList.toggle("on", on); w.text.classList.toggle("dim", dim); }
+    }
+  };
+  function apply(i) {
+    current = i;
+    stepText.replaceChildren();
+    if (i < 0) {
+      paint(null);
+      stepText.append(el("span", "num", "전체"), "'따라가기'를 누르면 흐름을 한 단계씩 짚어 드려요.");
+    } else {
+      const focus = new Set(steps[i].focus), before = new Set(i > 0 ? steps[i - 1].focus : []);
+      paint(focus, (e) => (focus.has(e.from) && focus.has(e.to)) || (before.has(e.from) && focus.has(e.to)));
+      stepText.append(el("span", "num", `${i + 1} / ${steps.length}`), steps[i].text);
+    }
+    prev.disabled = i < 0;
+    next.disabled = i >= steps.length - 1;
+    next.textContent = i < 0 ? "따라가기" : "다음";
+  }
+  prev.onclick = () => apply(current - 1);
+  next.onclick = () => apply(current + 1);
+
+  new ResizeObserver(() => {
+    const dir = scroll.clientWidth < 520 ? "col" : "row";
+    if (flow.dataset.dir !== dir) flow.dataset.dir = dir;
+    requestAnimationFrame(draw);
+  }).observe(scroll);
+  apply(-1);
+  return box;
+}
+
+const RENDER = { flow: renderFlow, timeline: renderTimeline, compare: renderCompare, cards: renderCards, callout: renderCallout, text: renderText,
+  stats: (b) => { const box = blockShell(b); box.append(renderStats(b.items)); return box; } };
+
+/* page */
+const head = el("header", "doc-head");
+head.append(el("span", "eyebrow", "문서 정리"), el("h1", null, DATA.title));
+if (DATA.subtitle) head.append(el("p", "subtitle", DATA.subtitle));
+if (DATA.source) {
+  const s = el("div", "source");
+  const name = el("span", null, "원문: ");
+  if (DATA.source.url && /^https:\/\//.test(DATA.source.url)) {
+    const a = el("a", null, DATA.source.name || DATA.source.url);
+    a.href = DATA.source.url; a.target = "_blank"; a.rel = "noopener";
+    name.append(a);
+  } else name.append(DATA.source.name || "");
+  s.append(name);
+  if (DATA.source.date) s.append(el("span", null, "정리한 날: " + DATA.source.date));
+  head.append(s);
+}
+$page.append(head);
+
+if (DATA.tldr || (DATA.keypoints || []).length || (DATA.stats || []).length) {
+  const g = el("section", "glance");
+  const t = el("div", "tldr");
+  t.append(el("p", "label", "한 줄 요약"));
+  if (DATA.tldr) t.append(el("p", "lead", DATA.tldr));
+  if ((DATA.keypoints || []).length) {
+    const ul = el("ul");
+    for (const k of DATA.keypoints) { const li = el("li"); li.innerHTML = inline(k); ul.append(li); }
+    t.append(ul);
+  }
+  g.append(t);
+  if ((DATA.stats || []).length) {
+    const w = el("div", "stats-wrap");
+    w.append(el("p", "label", "핵심 수치"), renderStats(DATA.stats));
+    g.append(w);
+  } else g.style.gridTemplateColumns = "1fr";
+  $page.append(g);
+}
+
+const secs = DATA.sections || [];
+if (secs.length > 1) {
+  const nav = el("nav", "toc");
+  nav.setAttribute("aria-label", "목차");
+  secs.forEach((s, i) => { const a = el("a", null, s.heading); a.href = "#" + (s.id || "s" + (i + 1)); nav.append(a); });
+  $page.append(nav);
+}
+
+secs.forEach((s, i) => {
+  const sec = el("section", "sec");
+  sec.id = s.id || "s" + (i + 1);
+  const h = el("div", "sec-head");
+  h.append(el("span", "sec-num", String(i + 1).padStart(2, "0")), el("h2", null, s.heading));
+  if (s.lead) h.append(el("p", "sec-lead", s.lead));
+  sec.append(h);
+  for (const b of s.blocks || []) {
+    const fn = RENDER[b.type];
+    if (fn) sec.append(fn(b));
+  }
+  $page.append(sec);
+});
+
+const foot = el("footer", "foot");
+foot.append(el("span", null, "원문을 바탕으로 정리한 페이지예요. 수치와 조건은 원문 표현을 따랐고, '원문을 바탕으로 정리' 표시가 있는 그림은 원문 내용을 재구성한 거예요."));
+if (DATA.source && DATA.source.url) foot.append(el("span", null, "정확한 최신 내용은 원문에서 확인하세요."));
+$page.append(foot);
+</script>

@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SSH 접속 흐름</title>
+<style>
+:root{
+  --bg:#f7f7f5; --card:#ffffff; --ink:#1d1d1f; --muted:#6b6b70; --line:#d9d9de;
+  --accent:#e8710a; --accent-soft:#fdebd9; --ok:#1f8a4c; --ok-soft:#dff3e7;
+  --block:#c62828; --block-soft:#fbe3e3; --blue:#2563eb; --blue-soft:#e3ecfd;
+  --dim:.18;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141416; --card:#1d1d20; --ink:#ececf0; --muted:#9a9aa3; --line:#34343a;
+    --accent:#ff9a3c; --accent-soft:#3a2614; --ok:#4cc782; --ok-soft:#13301f;
+    --block:#ff6b6b; --block-soft:#3a1717; --blue:#7aa7ff; --blue-soft:#17233d;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141416; --card:#1d1d20; --ink:#ececf0; --muted:#9a9aa3; --line:#34343a;
+  --accent:#ff9a3c; --accent-soft:#3a2614; --ok:#4cc782; --ok-soft:#13301f;
+  --block:#ff6b6b; --block-soft:#3a1717; --blue:#7aa7ff; --blue-soft:#17233d;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard",sans-serif}
+.wrap{max-width:1080px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:28px;margin:0 0 4px}
+h2{font-size:20px;margin:40px 0 12px}
+.sub{color:var(--muted);margin:0 0 20px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 8px}
+.chip{border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:14px;background:var(--card)}
+.chip.done{border-color:var(--ok);color:var(--ok);background:var(--ok-soft)}
+.chip.now{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+svg{width:100%;height:auto;display:block}
+svg text{fill:var(--ink);font-family:inherit}
+.box{fill:none;stroke:var(--line);stroke-width:1.5}
+.region{fill:none;stroke:var(--muted);stroke-dasharray:6 4}
+.vpc{fill:var(--blue-soft);stroke:var(--blue);stroke-width:1.5}
+.pub{fill:var(--card);stroke:var(--ok);stroke-width:1.5}
+.priv{fill:none;stroke:var(--muted);stroke-dasharray:5 4}
+.node{fill:var(--card);stroke:var(--ink);stroke-width:1.5}
+.sg{fill:var(--ok-soft);stroke:var(--ok);stroke-width:2}
+.future{opacity:.55}
+.lbl{font-size:13px;fill:var(--muted)}
+.ttl{font-size:15px;font-weight:700}
+.sm{font-size:12px}
+.wire{fill:none;stroke:var(--muted);stroke-width:2.5}
+.wire.ret{stroke-dasharray:6 5}
+.blockwire{fill:none;stroke:var(--block);stroke-width:2.5;stroke-dasharray:4 4}
+.part{transition:opacity .25s}
+.stage.focus .part{opacity:var(--dim)}
+.stage.focus .part.on{opacity:1}
+.stage.focus .part.on .wire{stroke:var(--accent);stroke-width:4}
+.stage.focus .part.on .node,.stage.focus .part.on .sg{stroke:var(--accent);stroke-width:3}
+.controls{display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap}
+button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:8px 14px;cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button:disabled{opacity:.4;cursor:default}
+.counter{color:var(--muted);font-size:14px}
+.explain{margin-top:12px;padding:14px 16px;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:8px;min-height:84px}
+.explain b{display:block;margin-bottom:4px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:13px}
+code{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:.9em}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;overflow-x:auto;font-size:14px;margin:8px 0 0}
+.steps{display:grid;gap:12px}
+.step{display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:start}
+.num{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:700;background:var(--blue-soft);color:var(--blue)}
+.step h3{margin:0 0 4px;font-size:17px}
+.step p{margin:0;color:var(--muted)}
+.note{font-size:14px;color:var(--muted);margin-top:8px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:10px}
+.legend span::before{content:"";display:inline-block;width:22px;height:0;border-top:3px solid var(--muted);vertical-align:middle;margin-right:6px}
+.legend .l-ret::before{border-top-style:dashed}
+.legend .l-blk::before{border-top:3px dashed var(--block)}
+.legend .l-fut::before{border-top:2px dashed var(--muted);opacity:.6}
+/* motion */
+@keyframes flow{to{stroke-dashoffset:-22}}
+.stage.focus .part.on .wire{stroke-dasharray:8 6;animation:flow .6s linear infinite}
+.stage.focus .part.on .wire.ret{animation-direction:reverse}
+#pkt{opacity:0;transition:opacity .2s}
+#pkt.show{opacity:1}
+#pkt circle{fill:var(--accent);stroke:var(--card);stroke-width:2.5}
+#pkt.ret circle{fill:var(--blue)}
+#pkt.bad circle{fill:var(--block)}
+#pkt.db circle{fill:var(--muted)}
+#pkt text{fill:#fff;font-size:8px;font-weight:700}
+#pktglow{fill:var(--accent);opacity:.25}
+#pkt.ret #pktglow{fill:var(--blue)}
+#pkt.bad #pktglow{fill:var(--block)}
+@keyframes pulse{0%{r:14}50%{r:22}100%{r:14}}
+#pktglow{animation:pulse 1s ease-in-out infinite}
+#tag rect{fill:var(--ink);opacity:.9}
+#tag text{fill:var(--bg);font-size:11px;font-weight:600}
+#tag{opacity:0;transition:opacity .2s}
+#tag.show{opacity:1}
+.fx{opacity:0;transform-box:fill-box;transform-origin:center}
+.fx.show{animation:pop .5s cubic-bezier(.2,1.6,.4,1) forwards}
+@keyframes pop{0%{opacity:0;transform:scale(.3)}100%{opacity:1;transform:scale(1)}}
+.fx.shake.show{animation:pop .4s forwards,shake .4s .4s 2}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.gatehit{animation:gate .7s ease-out}
+@keyframes gate{0%{stroke-width:2}40%{stroke-width:7}100%{stroke-width:2}}
+.progress{height:4px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:12px}
+.progress i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+@media (prefers-reduced-motion: reduce){.stage.focus .part.on .wire{animation:none}#pktglow{animation:none}}
+@media (max-width:640px){h1{font-size:23px}.card{padding:14px}th,td{padding:8px 4px;font-size:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>SSH 접속까지: 패킷은 어디를 지나갔나</h1>
+  <p class="sub">2026-10-23 진행 기록 · Mac에서 <code>ssh</code> 명령 한 줄을 쳤을 때 실제로 일어난 일</p>
+
+  <div class="chips">
+    <span class="chip done">A 리전 서울 ✓</span>
+    <span class="chip done">B 결제 알림 ✓</span>
+    <span class="chip done">C aws-study-vpc ✓</span>
+    <span class="chip done">D web-sg · db-sg ✓</span>
+    <span class="chip done">E EC2 + SSH 접속 ✓</span>
+    <span class="chip now">F 서버 기본 세팅</span>
+    <span class="chip">G 흐름 로그</span>
+    <span class="chip">H RDS</span>
+    <span class="chip">I Next.js</span>
+  </div>
+
+  <h2>1. 흐름도: 단계별로 따라가기</h2>
+  <div class="card">
+    <div class="stage" id="stage">
+    <svg viewBox="0 0 1000 600" role="img" aria-label="Mac에서 EC2까지 SSH 접속 흐름">
+      <!-- region & vpc -->
+      <g class="part" data-id="region">
+        <rect class="region" x="300" y="16" width="684" height="568" rx="16"/>
+        <text class="lbl" x="320" y="40">AWS 서울 리전 (ap-northeast-2)</text>
+      </g>
+      <g class="part" data-id="vpc">
+        <rect class="vpc" x="400" y="56" width="568" height="512" rx="14"/>
+        <text class="ttl" x="420" y="84">aws-study-vpc</text>
+        <text class="lbl" x="560" y="84">10.0.0.0/16 · vpc-0123456789abcdef0</text>
+      </g>
+
+      <!-- route table -->
+      <g class="part" data-id="rtb">
+        <rect class="node" x="420" y="100" width="300" height="46" rx="10"/>
+        <text class="sm" x="434" y="120" font-weight="700">rtb-public (라우팅 테이블)</text>
+        <text class="sm" x="434" y="137">10.0.0.0/16 → local · 0.0.0.0/0 → igw</text>
+      </g>
+
+      <!-- public subnet -->
+      <g class="part" data-id="subnet">
+        <rect class="pub" x="440" y="162" width="510" height="200" rx="12"/>
+        <text class="ttl" x="458" y="188">public1 (ap-northeast-2a)</text>
+        <text class="lbl" x="458" y="206">퍼블릭 서브넷 · 기본 NACL: 전체 허용</text>
+      </g>
+
+      <!-- security group + ec2 -->
+      <g class="part" data-id="sg">
+        <rect class="sg" x="600" y="216" width="330" height="130" rx="12"/>
+        <text class="ttl" x="616" y="240">web-sg</text>
+        <text class="sm" x="690" y="240">SSH 22 ← 내 IP만 · HTTP 80 ← 내 IP만</text>
+      </g>
+      <g class="part" data-id="ec2">
+        <rect class="node" x="626" y="254" width="282" height="80" rx="10"/>
+        <text class="ttl" x="642" y="278">EC2 aws-study-web</text>
+        <text class="sm" x="642" y="298">t3.micro · Amazon Linux 2023</text>
+        <text class="sm" x="642" y="318">10.0.3.25 ⇄ 203.0.113.10 · sshd :22</text>
+      </g>
+
+      <!-- private (future) -->
+      <g class="part future" data-id="priv">
+        <rect class="priv" x="440" y="384" width="510" height="168" rx="12"/>
+        <text class="ttl" x="458" y="410">private1 (2a) · private2 (2b)</text>
+        <text class="lbl" x="458" y="428">인터넷 경로 없음 · 아직 비어 있음</text>
+        <rect class="priv" x="600" y="444" width="330" height="92" rx="10"/>
+        <text class="ttl" x="616" y="470">db-sg → RDS MySQL (H단계)</text>
+        <text class="sm" x="616" y="492">3306 ← web-sg 를 단 서버만</text>
+        <text class="sm" x="616" y="512">퍼블릭 액세스: 아니요</text>
+        <path class="wire" d="M767 334 L767 444" stroke-dasharray="4 5"/>
+      </g>
+
+      <!-- mac -->
+      <g class="part" data-id="mac">
+        <rect class="node" x="16" y="232" width="150" height="104" rx="12"/>
+        <text class="ttl" x="32" y="258">내 Mac</text>
+        <text class="sm" x="32" y="280">터미널: ssh</text>
+        <text class="sm" x="32" y="298">~/.ssh/aws-study-key.pem</text>
+        <text class="sm" x="32" y="316">(개인 키 = 카드키)</text>
+      </g>
+
+      <!-- internet -->
+      <g class="part" data-id="net">
+        <ellipse class="node" cx="236" cy="284" rx="50" ry="32"/>
+        <text class="ttl" x="236" y="289" text-anchor="middle">인터넷</text>
+      </g>
+
+      <!-- igw -->
+      <g class="part" data-id="igw">
+        <rect class="node" x="344" y="254" width="104" height="60" rx="10"/>
+        <text class="ttl" x="396" y="279" text-anchor="middle">IGW</text>
+        <text class="sm" x="396" y="298" text-anchor="middle">aws-study-igw</text>
+      </g>
+
+      <!-- wires -->
+      <g class="part" data-id="w1"><path class="wire" d="M166 284 L186 284"/></g>
+      <g class="part" data-id="w2"><path class="wire" d="M286 284 L344 284"/></g>
+      <g class="part" data-id="w3"><path class="wire" d="M448 284 L600 284"/></g>
+      <g class="part" data-id="w4"><path class="wire" d="M600 296 L626 296"/></g>
+      <g class="part" data-id="wret"><path class="wire ret" d="M626 316 L448 316 M344 300 L286 300 L180 300 L166 300"/></g>
+
+      <!-- rejected stranger -->
+      <g class="part" data-id="stranger">
+        <rect class="node" x="16" y="420" width="150" height="70" rx="12" style="stroke:var(--block)"/>
+        <text class="ttl" x="32" y="446">다른 사람</text>
+        <text class="sm" x="32" y="466">ssh 203.0.113.10</text>
+        <path class="blockwire" d="M166 455 L560 455 L560 300 L594 300"/>
+        <text class="sm" x="260" y="446" fill="var(--block)">보안 그룹에서 차단 → G단계 흐름 로그에 REJECT 기록</text>
+      </g>
+
+      <!-- motion layer -->
+      <g style="visibility:hidden" id="routes"></g>
+      <text class="fx" id="fx-sg" x="572" y="262" font-size="26" fill="var(--ok)" font-weight="700">✓</text>
+      <text class="fx" id="fx-key" x="868" y="308" font-size="24">🔓</text>
+      <text class="fx shake" id="fx-x" x="566" y="270" font-size="30" fill="var(--block)" font-weight="700">✕</text>
+      <g class="fx" id="fx-log">
+        <rect x="190" y="500" width="380" height="30" rx="8" fill="var(--block-soft)" stroke="var(--block)"/>
+        <text class="sm" x="202" y="520" fill="var(--block)">REJECT · 223.38.x.x → 10.0.3.25:22 · 흐름 로그에 기록</text>
+      </g>
+      <g id="tag"><rect x="0" y="0" width="10" height="22" rx="6"/><text x="0" y="15"></text></g>
+      <g id="pkt"><circle id="pktglow" r="14"/><circle r="11"/><text text-anchor="middle" y="3">SSH</text></g>
+    </svg>
+    </div>
+    <div class="legend">
+      <span>요청</span><span class="l-ret">응답(자동 허용)</span><span class="l-blk">차단</span><span class="l-fut">아직 안 만든 것</span>
+    </div>
+    <div class="controls">
+      <button id="prev">← 이전</button>
+      <button id="next" class="primary">따라가기 시작 →</button>
+      <button id="play">▶ 자동 재생</button>
+      <button id="all">처음으로</button>
+      <span class="counter" id="counter"></span>
+    </div>
+    <div class="progress"><i id="bar"></i></div>
+    <div class="explain" id="explain"><b>버튼을 눌러 패킷이 지나가는 길을 한 칸씩 따라가 보세요.</b>내 Mac에서 출발한 SSH 요청이 서버에 닿고 응답이 돌아오기까지 7단계예요.</div>
+  </div>
+
+  <h2>2. 문을 지키는 세 겹의 잠금</h2>
+  <div class="card">
+    <table>
+      <tr><th>잠금</th><th>어디서</th><th>무엇을 보나</th><th>다른 사람이 시도하면</th></tr>
+      <tr><td><b>① 라우팅</b></td><td>rtb-public</td><td>이 서브넷에 인터넷 길(0.0.0.0/0 → igw)이 있나</td><td>public 서브넷까지는 길이 있음. private 서브넷에는 길 자체가 없음</td></tr>
+      <tr><td><b>② 보안 그룹</b></td><td>web-sg</td><td>보낸 사람 IP가 <code>내 IP/32</code>인가, 포트가 22인가</td><td><b>여기서 차단</b>. 응답 없이 시간 초과(timeout)</td></tr>
+      <tr><td><b>③ 키 인증</b></td><td>EC2의 sshd</td><td>개인 키(.pem)로 만든 서명이 서버의 공개 키와 맞나</td><td>내 IP에서 오더라도 키가 없으면 <code>Permission denied (publickey)</code></td></tr>
+    </table>
+    <p class="note">NACL은 기본값(전체 허용)이라 지금은 아무것도 막지 않아요. 보안 그룹은 상태를 기억하기(stateful) 때문에, 들어온 요청의 응답은 아웃바운드 규칙과 상관없이 자동으로 나가요.</p>
+  </div>
+
+  <h2>3. 지금까지 만든 것</h2>
+  <div class="card">
+    <table>
+      <tr><th>리소스</th><th>이름 / ID</th><th>비용</th></tr>
+      <tr><td>VPC</td><td>aws-study-vpc · vpc-0123456789abcdef0</td><td>무료</td></tr>
+      <tr><td>서브넷</td><td>public1·2, private1·2 (2a, 2b)</td><td>무료</td></tr>
+      <tr><td>인터넷 게이트웨이</td><td>aws-study-igw</td><td>무료 (NAT 게이트웨이는 만들지 않음)</td></tr>
+      <tr><td>보안 그룹</td><td>web-sg · sg-0aaaaaaaaaaaaaaa1 / db-sg · sg-0bbbbbbbbbbbbbbb2</td><td>무료</td></tr>
+      <tr><td>EC2</td><td>aws-study-web · t3.micro · 20GB gp3</td><td>프리 티어 대상 (크레딧 차감)</td></tr>
+      <tr><td>퍼블릭 IPv4</td><td>203.0.113.10</td><td>인스턴스를 중지하면 반납되고, 다시 시작하면 바뀜</td></tr>
+    </table>
+  </div>
+
+  <h2>4. 다음 단계</h2>
+  <div class="steps">
+    <div class="step"><div class="num">F</div><div class="card"><h3>서버 기본 세팅</h3><p>패키지를 업데이트하고 스왑 2GB를 만들어요. 메모리가 1GB뿐이라 Next.js 빌드 전에 꼭 필요해요.</p>
+<pre>sudo dnf update -y
+sudo dd if=/dev/zero of=/swapfile bs=1M count=2048
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile swap swap defaults 0 0' | sudo tee -a /etc/fstab
+free -h</pre></div></div>
+    <div class="step"><div class="num">G</div><div class="card"><h3>VPC 흐름 로그 → 차단 기록 보기</h3><p>VPC → aws-study-vpc → 플로우 로그 → 생성. 필터 <b>거부(REJECT)</b>, 대상 <b>CloudWatch Logs</b>, 보존 <b>1주</b>. 휴대폰 핫스팟처럼 다른 IP에서 ssh를 시도한 뒤 기록이 남는지 확인해요.</p></div></div>
+    <div class="step"><div class="num">H</div><div class="card"><h3>RDS MySQL (프라이빗 서브넷)</h3><p>프리 티어 템플릿 · db.t3.micro · 20GB · 자동 확장 끄기 · <b>퍼블릭 액세스 아니요</b> · aws-study-vpc · 보안 그룹은 <b>db-sg만</b>.</p></div></div>
+    <div class="step"><div class="num">I</div><div class="card"><h3>EC2 → RDS 접속 확인</h3><p>EC2에 MySQL 클라이언트를 설치하고 RDS 엔드포인트로 접속해요. 이게 되면 "게이트웨이를 거쳐 DB로" 구조가 완성돼요.</p></div></div>
+    <div class="step"><div class="num">J</div><div class="card"><h3>Next.js 서버</h3><p>Node 설치 → 앱 빌드 → pm2로 실행 → Nginx가 80번으로 받아 3000번으로 넘기기. 브라우저에서 <code>http://203.0.113.10</code>으로 확인해요.</p></div></div>
+    <div class="step"><div class="num">✓</div><div class="card"><h3>매번 끝날 때</h3><p>EC2를 중지해요. RDS는 중지해도 <b>7일 뒤 자동으로 다시 켜지니</b>, 과제를 마치면 삭제하세요.</p></div></div>
+  </div>
+
+  <p class="note" style="margin-top:28px">자세한 개념: <a href="01-VPC-기본구조.html">01 VPC</a> · <a href="03-보안그룹.html">03 보안 그룹</a> · <a href="05-VPC-흐름로그.html">05 흐름 로그</a> · <a href="06-RDS-접근제어.html">06 RDS</a> · <a href="07-Nextjs-셀프호스팅.html">07 Next.js</a> · <a href="00-3일-공부계획표.html">00 계획표</a></p>
+</div>
+
+<script>
+const STEPS = [
+  {on:["mac","w1"], route:"M150 284 L186 284", tag:["내 IP → 203.0.113.10:22"], t:"① 내 Mac: 열쇠를 들고 출발", d:"<code>ssh -i ~/.ssh/aws-study-key.pem ec2-user@203.0.113.10</code>을 실행하면 ssh가 목적지의 22번 포트로 연결을 시작해요. 보내는 사람 주소는 집 공유기의 공인 IP(= 보안 그룹의 '내 IP')예요."},
+  {on:["net","w2","region"], route:"M186 284 L236 284 L344 284", tag:["내 IP → 203.0.113.10:22"], t:"② 인터넷을 지나 AWS 서울 리전으로", d:"203.0.113.10은 AWS가 서울 리전에 빌려준 공인 주소라서, 인터넷 라우터들이 패킷을 AWS로 보내 줘요."},
+  {on:["igw","vpc"], route:"M344 284 L448 284", tag:["내 IP → 203.0.113.10:22","내 IP → 10.0.3.25:22"], t:"③ 인터넷 게이트웨이(IGW): VPC의 대문", d:"IGW가 목적지 주소를 공인 IP 203.0.113.10에서 EC2의 사설 IP 10.0.3.25로 바꿔 VPC 안으로 들여보내요. 패킷 위 꼬리표가 바뀌는 걸 보세요. IGW가 없으면 VPC는 인터넷과 완전히 끊겨 있어요."},
+  {on:["rtb","subnet","w3"], route:"M448 284 L600 284", tag:["내 IP → 10.0.3.25:22"], t:"④ 라우팅 테이블과 public 서브넷", d:"rtb-public에 '0.0.0.0/0 → igw' 경로가 있어서 이 서브넷은 인터넷과 오갈 수 있어요. 이런 서브넷을 '퍼블릭 서브넷'이라고 불러요. 기본 NACL은 전체 허용이라 그대로 통과해요."},
+  {on:["sg","w4"], route:"M600 284 L600 296 L626 296", tag:["출발지 = 내 IP/32 ?"], fx:"sg", gate:"sg", t:"⑤ 보안 그룹 web-sg: 첫 번째 검문", d:"규칙 'SSH 22 ← 내 IP/32'와 비교해요. 보낸 사람이 내 IP라서 통과(✓)! 다른 IP라면 여기서 조용히 버려지고, 상대는 timeout을 봐요."},
+  {on:["ec2"], route:"M626 296 L840 296", tag:["🔑 개인 키 서명 확인"], fx:"key", gate:"ec2", t:"⑥ EC2의 sshd: 두 번째 검문(키 인증)", d:"ec2-user 계정에는 인스턴스를 만들 때 넣은 공개 키(자물쇠)가 있어요. Mac의 개인 키로 만든 서명이 맞으면 잠금 해제(🔓). 그래서 프롬프트가 [ec2-user@ip-10-0-3-25]로 바뀌어요."},
+  {on:["wret","ec2","igw","mac","net"], route:"M840 316 L626 316 L448 316 L396 300 L286 300 L160 300", cls:"ret", label:"응답", tag:["10.0.3.25 → 내 IP","203.0.113.10 → 내 IP"], t:"⑦ 응답은 같은 길로 자동 귀환", d:"보안 그룹은 상태를 기억해서(stateful) 들어온 연결의 응답은 따로 규칙 없이 나가요. IGW가 사설 IP를 다시 공인 IP로 바꿔 Mac으로 돌려보내요. 이후 입력하는 모든 명령이 이 암호화된 통로로 오가요."},
+  {on:["stranger","sg"], route:"M166 455 L560 455 L560 300 L592 300", cls:"bad", label:"SSH", tag:["223.38.x.x → :22"], fx:"x", gate:"sg", log:true, t:"덤: 다른 사람이 시도하면?", d:"내 IP가 아니니 web-sg에서 차단돼요(✕). G단계에서 흐름 로그(REJECT)를 켜 두면 '누가, 언제, 어느 포트로' 시도했는지 CloudWatch에 한 줄씩 남아요. 이게 과제의 '진입 시도 로그'예요."},
+  {on:["priv","sg","ec2"], route:"M767 334 L767 470", cls:"db", label:"SQL", tag:["web-sg → db-sg :3306"], t:"다음: 프라이빗 서브넷의 DB", d:"private 서브넷에는 IGW로 가는 경로가 없어서 인터넷에서 바로 갈 길이 없어요. RDS를 여기에 두고 db-sg로 'web-sg를 단 서버만 3306 허용'을 걸면, DB에는 EC2를 거쳐서만 들어갈 수 있어요."}
+];
+const NS="http://www.w3.org/2000/svg";
+const stage=document.getElementById('stage'), ex=document.getElementById('explain'),
+      cnt=document.getElementById('counter'), prev=document.getElementById('prev'), next=document.getElementById('next'),
+      playBtn=document.getElementById('play'), bar=document.getElementById('bar'),
+      pkt=document.getElementById('pkt'), tag=document.getElementById('tag'), tagText=tag.querySelector('text'), tagRect=tag.querySelector('rect'),
+      routes=document.getElementById('routes');
+const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+const paths=STEPS.map(s=>{const p=document.createElementNS(NS,'path');p.setAttribute('d',s.route);routes.appendChild(p);return p;});
+let i=-1, raf=0, timer=0, playing=false;
+
+function setTag(txt,x,y){
+  if(tagText.textContent!==txt){tagText.textContent=txt;}
+  let w=120;try{w=tagText.getComputedTextLength()+16;}catch(e){}
+  tagRect.setAttribute('width',w);
+  tag.setAttribute('transform','translate('+(x-w/2)+','+(y-40)+')');
+  tagText.setAttribute('x',8);
+}
+function clearFx(){
+  document.querySelectorAll('.fx').forEach(f=>f.classList.remove('show'));
+  document.querySelectorAll('.gatehit').forEach(g=>g.classList.remove('gatehit'));
+}
+function gate(id){
+  const el=stage.querySelector('[data-id="'+id+'"] rect');
+  if(!el)return; el.classList.remove('gatehit'); void el.getBBox(); el.classList.add('gatehit');
+}
+function ease(t){return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
+function animate(s,p,done){
+  cancelAnimationFrame(raf);
+  pkt.setAttribute('class','show'+(s.cls?' '+s.cls:''));
+  pkt.querySelector('text').textContent=s.label||'SSH';
+  tag.classList.add('show');
+  const L=p.getTotalLength(), dur=reduce?0:Math.max(900,L*7);
+  const t0=performance.now();
+  function frame(now){
+    const k=dur?Math.min(1,(now-t0)/dur):1, pt=p.getPointAtLength(ease(k)*L);
+    pkt.setAttribute('transform','translate('+pt.x+','+pt.y+')');
+    const tg=s.tag.length>1&&k>.5?s.tag[1]:s.tag[0];
+    setTag(tg,pt.x,pt.y);
+    if(k<1){raf=requestAnimationFrame(frame);}else{done&&done();}
+  }
+  raf=requestAnimationFrame(frame);
+}
+function render(){
+  clearTimeout(timer); cancelAnimationFrame(raf); clearFx();
+  const parts=stage.querySelectorAll('.part');
+  bar.style.width=((i+1)/STEPS.length*100)+'%';
+  if(i<0){stage.classList.remove('focus');parts.forEach(p=>p.classList.remove('on'));
+    pkt.setAttribute('class','');tag.classList.remove('show');
+    ex.innerHTML='<b>▶ 자동 재생을 누르거나 한 칸씩 따라가 보세요.</b>내 Mac에서 출발한 SSH 패킷이 서버에 닿고 응답이 돌아오기까지 7단계, 그리고 차단·DB 장면 2개예요.';
+    cnt.textContent='';prev.disabled=true;next.textContent='따라가기 시작 →';return;}
+  const s=STEPS[i];stage.classList.add('focus');
+  parts.forEach(p=>p.classList.toggle('on',s.on.includes(p.dataset.id)));
+  ex.innerHTML='<b>'+s.t+'</b>'+s.d;
+  cnt.textContent=(i+1)+' / '+STEPS.length;prev.disabled=false;
+  next.textContent=i===STEPS.length-1?'처음으로':'다음 →';
+  animate(s,paths[i],()=>{
+    if(s.gate)gate(s.gate);
+    if(s.fx)document.getElementById('fx-'+s.fx).classList.add('show');
+    if(s.log)setTimeout(()=>document.getElementById('fx-log').classList.add('show'),400);
+    if(s.cls==='bad'){setTimeout(()=>{pkt.setAttribute('class','bad');tag.classList.remove('show');},700);}
+    if(playing){timer=setTimeout(()=>{if(i<STEPS.length-1){i++;render();}else{setPlaying(false);}},reduce?3500:2600);}
+  });
+}
+function setPlaying(v){playing=v;playBtn.textContent=v?'⏸ 일시정지':'▶ 자동 재생';}
+playBtn.onclick=()=>{if(playing){setPlaying(false);clearTimeout(timer);return;}setPlaying(true);if(i>=STEPS.length-1)i=-1;i++;render();};
+next.onclick=()=>{setPlaying(false);i=i>=STEPS.length-1?-1:i+1;render();};
+prev.onclick=()=>{setPlaying(false);i=Math.max(-1,i-1);render();};
+document.getElementById('all').onclick=()=>{setPlaying(false);i=-1;render();};
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')next.click();if(e.key==='ArrowLeft'&&!prev.disabled)prev.click();if(e.key===' '){e.preventDefault();playBtn.click();}});
+render();
+</script>
+</body>
+</html>

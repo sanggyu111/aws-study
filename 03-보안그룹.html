@@ -1,0 +1,1100 @@
+<meta charset="utf-8">
+<title>보안 그룹 한눈에</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column — header, at-a-glance band (TL;DR, key numbers), section map, then sections that each lead with a picture. */
+:root {
+  --bg: #f4f6f8;
+  --paper: #ffffff;
+  --ink: #18212b;
+  --muted: #5a6776;
+  --line: #d6dde5;
+  --accent: #2b5fa8;
+  --accent-soft: #e6eef9;
+  --good: #2f7a55;
+  --bad: #a8433a;
+  --warn: #9a6a12;
+  --warn-soft: #faf1de;
+  --font-display: "Gowun Batang", "Nanum Myeongjo", "AppleMyungjo", serif;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --step--1: 0.8125rem;
+  --step-0: 0.9688rem;
+  --step-1: 1.1875rem;
+  --step-2: 1.5rem;
+  --step-3: 2.125rem;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161c; --paper: #182029; --ink: #e2e8ef; --muted: #95a3b3; --line: #2b3643;
+    --accent: #7eaaf0; --accent-soft: #1d2a3b; --good: #6cc196; --bad: #ec8b80; --warn: #e2b55a; --warn-soft: #2a2416;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161c; --paper: #182029; --ink: #e2e8ef; --muted: #95a3b3; --line: #2b3643;
+  --accent: #7eaaf0; --accent-soft: #1d2a3b; --good: #6cc196; --bad: #ec8b80; --warn: #e2b55a; --warn-soft: #2a2416;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.7;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+
+.page { max-width: 920px; margin: 0 auto; padding-block: 40px 64px; display: flex; flex-direction: column; gap: 36px; }
+
+/* header */
+.doc-head { display: flex; flex-direction: column; gap: 10px; }
+.eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.doc-head h1 { font-family: var(--font-display); font-size: var(--step-3); line-height: 1.2; margin: 0; text-wrap: balance; }
+.doc-head .subtitle { margin: 0; color: var(--muted); font-size: var(--step-1); line-height: 1.5; max-width: 60ch; }
+.source { font-size: var(--step--1); color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.source a { overflow-wrap: anywhere; }
+
+/* at a glance */
+.glance { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; }
+.tldr { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+.tldr p.lead { margin: 0; font-size: var(--step-1); line-height: 1.55; font-weight: 500; text-wrap: pretty; }
+.tldr ul { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 4px; }
+.label { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+
+/* section map */
+.toc { display: flex; flex-wrap: wrap; gap: 8px; counter-reset: toc; }
+.toc a {
+  counter-increment: toc;
+  text-decoration: none; color: var(--ink);
+  border: 1px solid var(--line); background: var(--paper);
+  border-radius: 999px; padding: 4px 12px 4px 6px; font-size: var(--step--1);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.toc a::before { content: counter(toc); width: 20px; height: 20px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-size: 0.6875rem; font-weight: 600; }
+.toc a:hover { border-color: var(--accent); }
+
+/* sections */
+.sec { display: flex; flex-direction: column; gap: 16px; scroll-margin-top: 16px; }
+.sec-head { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: baseline; }
+.sec-num { font-family: var(--font-display); font-size: var(--step-2); color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
+.sec h2 { font-family: var(--font-display); font-size: var(--step-2); line-height: 1.3; margin: 0; text-wrap: balance; }
+.sec .sec-lead { grid-column: 2; margin: 0; color: var(--muted); }
+
+.block { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; container-type: inline-size; }
+.block-title { font-weight: 600; font-size: var(--step-0); margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.derived { font-size: 0.6875rem; font-weight: 500; color: var(--muted); border: 1px dashed var(--line); border-radius: 4px; padding: 0 6px; }
+.block.text-block { background: transparent; border: none; padding: 0; }
+.md p { margin: 0 0 0.6em; }
+.md p:last-child, .md ul:last-child, .md ol:last-child { margin-bottom: 0; }
+.md ul, .md ol { margin: 0 0 0.6em; padding-left: 1.2em; }
+.md code { font-family: var(--font-mono); font-size: 0.86em; background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; }
+
+/* stats */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.stat { display: flex; flex-direction: column; gap: 2px; padding: 4px 0; border-top: 3px solid var(--accent); }
+.stat .v { font-family: var(--font-display); font-size: var(--step-3); font-weight: 700; line-height: 1.1; color: var(--accent); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat .l { font-weight: 600; font-size: var(--step--1); }
+.stat .n { color: var(--muted); font-size: 0.75rem; line-height: 1.45; }
+.glance .stats { grid-template-columns: 1fr 1fr; align-content: start; }
+.glance .stats-wrap { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; }
+
+/* cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.card .tag { align-self: flex-start; font-size: 0.6875rem; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 4px; padding: 0 6px; }
+.card b { font-size: var(--step-0); line-height: 1.4; }
+.card span.t { color: var(--muted); font-size: var(--step--1); line-height: 1.55; }
+
+/* compare */
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: var(--step--1); }
+th, td { padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+thead th { font-weight: 600; color: var(--muted); font-size: 0.75rem; letter-spacing: 0.03em; white-space: nowrap; }
+tbody th { font-weight: 600; }
+td.hl, th.hl { background: var(--accent-soft); }
+thead th.hl { color: var(--accent); }
+.yes { color: var(--good); font-weight: 700; }
+.no { color: var(--bad); font-weight: 700; }
+
+/* callout */
+.callout { border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 10px 10px 0; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; }
+.callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+.callout .label { color: var(--accent); }
+.callout.warn .label { color: var(--warn); }
+
+/* timeline */
+.timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.tl { position: relative; padding: 0 0 18px 34px; display: flex; flex-direction: column; gap: 2px; }
+.tl::before { content: ""; position: absolute; left: 10px; top: 22px; bottom: 0; width: 2px; background: var(--line); }
+.tl:last-child { padding-bottom: 0; }
+.tl:last-child::before { display: none; }
+.tl .dot { position: absolute; left: 2px; top: 4px; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); background: var(--paper); }
+.tl[data-status="done"] .dot { border-color: var(--accent); background: var(--accent); }
+.tl[data-status="now"] .dot { border-color: var(--accent); background: var(--paper); box-shadow: 0 0 0 4px var(--accent-soft); }
+.tl[data-status="now"] .dot::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent); }
+.tl .when { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); }
+.tl[data-status="now"] .when { color: var(--accent); font-weight: 500; }
+.tl b { line-height: 1.4; }
+.tl span.t { color: var(--muted); font-size: var(--step--1); }
+
+/* flow with step-through */
+.flow-scroll { overflow-x: auto; min-width: 0; }
+.flow { position: relative; display: flex; gap: 56px; align-items: center; width: max-content; min-width: 100%; justify-content: center; padding: 10px 4px; }
+.flow[data-dir="col"] { flex-direction: column; gap: 44px; width: 100%; }
+.flow .rank { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 14px; }
+.flow[data-dir="col"] .rank { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+.wires { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: visible; }
+.wire { fill: none; stroke: var(--line); stroke-width: 1.75; transition: stroke 0.2s, opacity 0.2s; }
+.wire.on { stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: 7 5; }
+.wire.dim, .wire-label.dim { opacity: 0.3; }
+.wire-label { font-family: var(--font-body); font-size: 11px; fill: var(--muted); paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; }
+.wire-label.on { fill: var(--accent); font-weight: 600; }
+.arrow-head { fill: var(--line); }
+.arrow-head.on { fill: var(--accent); }
+@media (prefers-reduced-motion: no-preference) {
+  .wire.on { animation: wire-run 0.9s linear infinite; }
+  @keyframes wire-run { to { stroke-dashoffset: -12; } }
+}
+.node {
+  position: relative; width: 152px;
+  background: var(--paper); border: 1.5px solid var(--line); border-radius: 10px;
+  padding: 8px 10px 9px; display: flex; flex-direction: column; gap: 2px;
+  transition: border-color 0.2s, opacity 0.2s, box-shadow 0.2s;
+}
+.node[data-kind="store"] { border-style: double; border-width: 3px; }
+.node[data-kind="output"] { border-radius: 10px 10px 18px 18px; }
+.node[data-kind="input"] { border-radius: 18px 10px 10px 18px; }
+.node[data-kind="decision"] { border-style: dashed; }
+.node .kind { font-size: 0.6875rem; font-weight: 600; letter-spacing: 0.06em; color: var(--muted); }
+.node b { font-size: var(--step--1); line-height: 1.35; overflow-wrap: anywhere; }
+.node small { font-size: 0.75rem; color: var(--muted); line-height: 1.4; overflow-wrap: anywhere; }
+.node .badge {
+  position: absolute; top: -9px; right: -9px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px;
+  background: var(--paper); border: 1.5px solid var(--line); color: var(--muted);
+  font-size: 0.6875rem; font-weight: 600; display: grid; place-items: center; font-variant-numeric: tabular-nums;
+}
+.node.on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.node.on .kind, .node.on .badge { color: var(--accent); border-color: var(--accent); }
+.node.dim { opacity: 0.35; }
+.stepper { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; border-top: 1px solid var(--line); padding-top: 12px; }
+.stepper button { border: 1px solid var(--line); background: var(--paper); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: var(--step--1); white-space: nowrap; }
+.stepper button:hover:not([disabled]) { border-color: var(--accent); color: var(--accent); }
+.stepper button[disabled] { opacity: 0.4; cursor: default; }
+.step-text { font-size: var(--step--1); line-height: 1.55; min-width: 0; }
+.step-text .num { display: inline-block; font-weight: 600; color: var(--accent); margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+.foot { border-top: 1px solid var(--line); padding-top: 16px; font-size: 0.75rem; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+
+@media (max-width: 720px) {
+  .page { padding-block: 24px 48px; gap: 28px; }
+  .glance { grid-template-columns: 1fr; }
+  .stepper { grid-template-columns: 1fr 1fr; }
+  .stepper .step-text { grid-column: 1 / -1; grid-row: 1; }
+}
+</style>
+
+<div class="page" id="page"></div>
+
+<!-- Replace this whole JSON block with the document's data. Write "</" inside strings as "<\/". Schema: references/blocks.md -->
+<script id="doc-data" type="application/json">
+{
+  "title": "보안 그룹 한눈에",
+  "subtitle": "EC2에 내 IP로만 SSH를 열고, RDS는 EC2 보안 그룹에서 오는 연결만 받게 하는 데 필요한 개념 정리",
+  "source": {
+    "name": "Control traffic to your AWS resources using security groups (Amazon VPC User Guide)",
+    "url": "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-groups.html",
+    "date": "2026-10-22"
+  },
+  "tldr": "보안 그룹(security group)은 리소스에 붙는 가상 방화벽이고, 허용(allow) 규칙에 맞는 트래픽만 통과시킨다. 그래서 SSH(22)는 소스를 내 IP /32로만 허용하면 나머지는 저절로 막히고, RDS는 소스에 EC2의 보안 그룹 ID를 넣으면 그 EC2에서 오는 연결만 받는다.",
+  "keypoints": [
+    "허용 규칙만 만들 수 있고 거부(deny) 규칙은 없다. 맞는 허용 규칙이 없으면 차단된다.",
+    "새 보안 그룹은 인바운드(inbound) 규칙이 없고, 아웃바운드(outbound)는 모두 허용하는 규칙 1개가 있다.",
+    "상태 저장(stateful): 허용된 요청의 응답은 반대 방향 규칙과 상관없이 통과한다.",
+    "단일 IPv4 주소는 반드시 /32로 쓴다. 예: 203.0.113.1/32",
+    "소스(source)에 보안 그룹 ID(sg-...)를 넣으면 그 그룹에 연결된 인스턴스의 프라이빗 IP에서 오는 트래픽을 허용한다."
+  ],
+  "stats": [
+    {
+      "value": "/32",
+      "label": "단일 IPv4 주소의 접두사 길이",
+      "note": "예: 203.0.113.1/32 (IPv6는 /128)"
+    },
+    {
+      "value": "22 (SSH)",
+      "label": "Linux 인스턴스 접속 포트",
+      "note": "Windows는 3389 (RDP)"
+    },
+    {
+      "value": "3306",
+      "label": "MySQL/Aurora 기본 포트",
+      "note": "PostgreSQL 5432, MS SQL 1433, Oracle 1521"
+    },
+    {
+      "value": "255자",
+      "label": "이름·설명·규칙 설명 최대 길이",
+      "note": "보안 그룹 이름은 sg-로 시작할 수 없음"
+    }
+  ],
+  "sections": [
+    {
+      "id": "what",
+      "heading": "보안 그룹은 무엇을 하나",
+      "lead": "리소스(예: EC2 인스턴스)에 연결되어 들어오고 나가는 트래픽을 정하는 가상 방화벽이다.",
+      "blocks": [
+        {
+          "type": "cards",
+          "items": [
+            {
+              "tag": "역할",
+              "title": "가상 방화벽 (virtual firewall)",
+              "text": "인스턴스에 도달하는 트래픽은 보안 그룹 규칙이 허용한 것뿐이다. SSH 허용 규칙이 없으면 SSH로 접속할 수 없다."
+            },
+            {
+              "tag": "연결",
+              "title": "여러 개 연결 가능",
+              "text": "한 리소스에 보안 그룹을 여러 개 붙일 수 있고, 각 그룹의 규칙이 합쳐져(aggregated) 하나의 규칙 집합으로 판단된다."
+            },
+            {
+              "tag": "범위",
+              "title": "같은 VPC 안에서",
+              "text": "보안 그룹은 같은 VPC의 리소스에 연결한다(Security Group VPC Association 기능을 쓰면 같은 리전의 다른 VPC도 가능). 이름은 VPC 안에서 고유해야 한다."
+            },
+            {
+              "tag": "적용",
+              "title": "변경은 바로 반영",
+              "text": "규칙을 추가·수정·삭제하면 그 보안 그룹에 연결된 모든 리소스에 자동으로 적용된다."
+            },
+            {
+              "tag": "비용",
+              "title": "추가 요금 없음",
+              "text": "보안 그룹 사용에는 추가 요금이 없다(There is no additional charge)."
+            }
+          ]
+        },
+        {
+          "type": "callout",
+          "tone": "warn",
+          "title": "보안 그룹이 거르지 않는 트래픽",
+          "text": "Amazon DNS, Amazon DHCP, EC2 인스턴스 메타데이터(instance metadata), ECS 태스크 메타데이터 엔드포인트, Windows 라이선스 활성화, Amazon Time Sync Service, 기본 VPC 라우터의 예약 IP 주소로 오가는 트래픽은 보안 그룹이 필터링하지 않는다."
+        }
+      ]
+    },
+    {
+      "id": "defaults",
+      "heading": "처음 만들면 어떤 규칙이 들어 있나",
+      "lead": "직접 만든 보안 그룹과 VPC에 딸려 오는 기본 보안 그룹(default)은 처음 규칙이 다르다.",
+      "blocks": [
+        {
+          "type": "compare",
+          "title": "처음 상태 비교",
+          "columns": [
+            "구분",
+            "새로 만든 보안 그룹",
+            "기본 보안 그룹 (default)"
+          ],
+          "rows": [
+            [
+              "인바운드 (Inbound)",
+              "규칙 없음 → 들어오는 트래픽 모두 차단",
+              "소스가 자기 자신의 보안 그룹 ID, 모든 프로토콜·포트 허용 (같은 그룹끼리만 통신)"
+            ],
+            [
+              "아웃바운드 (Outbound)",
+              "모든 아웃바운드 허용 규칙 1개",
+              "0.0.0.0/0 All 허용 (IPv6 CIDR이 있으면 ::/0도)"
+            ],
+            [
+              "규칙 수정",
+              "가능",
+              "가능"
+            ],
+            [
+              "삭제",
+              "가능",
+              "불가 (Client.CannotDelete)"
+            ],
+            [
+              "언제 쓰이나",
+              "직접 만들어 연결",
+              "EC2 시작 때 보안 그룹을 지정하지 않으면 자동 연결"
+            ]
+          ],
+          "highlight": 1
+        },
+        {
+          "type": "callout",
+          "tone": "info",
+          "title": "AWS 권장",
+          "text": "기본 보안 그룹을 쓰기보다 리소스별로 보안 그룹을 만들어 연결하라고 권한다. 기본 규칙은 인터넷 게이트웨이(internet gateway)나 NAT 게이트웨이에서 오는 트래픽을 허용하지 않는다. 아웃바운드 규칙이 하나도 없으면 나가는 트래픽도 모두 막힌다."
+        }
+      ]
+    },
+    {
+      "id": "fields",
+      "heading": "규칙 한 줄은 무엇으로 이루어지나",
+      "lead": "인바운드 규칙은 프로토콜·포트·소스, 아웃바운드 규칙은 프로토콜·포트·대상으로 정한다.",
+      "blocks": [
+        {
+          "type": "cards",
+          "items": [
+            {
+              "tag": "필드",
+              "title": "프로토콜 (Protocol)",
+              "text": "가장 흔한 것은 6 (TCP), 17 (UDP), 1 (ICMP)."
+            },
+            {
+              "tag": "필드",
+              "title": "포트 범위 (Port range)",
+              "text": "TCP·UDP·사용자 지정 프로토콜에서 허용할 포트. 단일 포트(`22`) 또는 범위(`7000-8000`)."
+            },
+            {
+              "tag": "필드",
+              "title": "소스 / 대상 (Source / Destination)",
+              "text": "인바운드는 소스, 아웃바운드는 대상. IP 주소, CIDR 범위, 접두사 목록(prefix list) ID, 보안 그룹 ID 중 하나."
+            },
+            {
+              "tag": "선택",
+              "title": "설명 (Description)",
+              "text": "나중에 규칙을 알아보기 위한 메모. 최대 255자."
+            }
+          ]
+        },
+        {
+          "type": "compare",
+          "title": "소스에 넣을 수 있는 값",
+          "columns": [
+            "소스 종류",
+            "예시",
+            "뜻"
+          ],
+          "rows": [
+            [
+              "단일 IPv4 주소",
+              "203.0.113.1/32",
+              "그 주소 하나만. 반드시 /32"
+            ],
+            [
+              "단일 IPv6 주소",
+              "2001:db8:1234:1a00::123/128",
+              "그 주소 하나만. 반드시 /128"
+            ],
+            [
+              "IPv4 범위 (CIDR)",
+              "203.0.113.0/24",
+              "범위 안의 모든 주소"
+            ],
+            [
+              "IPv6 범위 (CIDR)",
+              "2001:db8:1234:1a00::/64",
+              "범위 안의 모든 주소"
+            ],
+            [
+              "접두사 목록 ID",
+              "pl-1234abc1234abc123",
+              "관리형 접두사 목록(managed prefix list)의 주소들"
+            ],
+            [
+              "보안 그룹 ID",
+              "sg-1234567890abcdef0",
+              "그 보안 그룹에 연결된 인스턴스들"
+            ]
+          ],
+          "derived": true
+        },
+        {
+          "type": "callout",
+          "tone": "info",
+          "title": "덧붙임",
+          "text": "EC2 콘솔에서 규칙을 추가할 때 소스 칸의 **My IP** 옵션을 고르면 지금 쓰는 컴퓨터의 퍼블릭 IPv4 주소가 `x.x.x.x/32` 형태로 채워진다. 읽은 원문에는 이 콘솔 옵션 설명이 없어 따로 표시했다. 집·카페처럼 네트워크가 바뀌면 퍼블릭 IP도 바뀔 수 있으니 접속이 안 되면 규칙을 다시 확인한다."
+        }
+      ]
+    },
+    {
+      "id": "ssh-flow",
+      "heading": "SSH 패킷은 어떻게 허용되거나 막히나",
+      "lead": "deny 규칙이 없으므로, 허용 규칙 중 하나와 맞으면 통과하고 하나도 맞지 않으면 차단된다.",
+      "blocks": [
+        {
+          "type": "flow",
+          "title": "인바운드 SSH 요청 판단",
+          "derived": true,
+          "nodes": [
+            {
+              "id": "req",
+              "label": "SSH 요청 도착",
+              "kind": "input",
+              "note": "TCP, 포트 22, 출발지 퍼블릭 IP"
+            },
+            {
+              "id": "rules",
+              "label": "인바운드 규칙 모음",
+              "kind": "store",
+              "note": "연결된 모든 보안 그룹 규칙을 합친 집합"
+            },
+            {
+              "id": "match",
+              "label": "허용 규칙과 일치?",
+              "kind": "decision",
+              "note": "프로토콜·포트·소스가 모두 맞는 규칙 있나"
+            },
+            {
+              "id": "allow",
+              "label": "허용 → 접속",
+              "kind": "output",
+              "note": "예: 소스 203.0.113.1/32인 내 PC"
+            },
+            {
+              "id": "drop",
+              "label": "차단",
+              "kind": "output",
+              "note": "맞는 허용 규칙 없음 (다른 IP 전부)"
+            },
+            {
+              "id": "reply",
+              "label": "응답은 자동 통과",
+              "kind": "process",
+              "note": "stateful: 아웃바운드 규칙과 무관"
+            }
+          ],
+          "edges": [
+            {
+              "from": "req",
+              "to": "match",
+              "label": "검사"
+            },
+            {
+              "from": "rules",
+              "to": "match",
+              "label": "비교 기준"
+            },
+            {
+              "from": "match",
+              "to": "allow",
+              "label": "일치"
+            },
+            {
+              "from": "match",
+              "to": "drop",
+              "label": "불일치"
+            },
+            {
+              "from": "allow",
+              "to": "reply",
+              "label": "응답"
+            }
+          ],
+          "steps": [
+            {
+              "focus": [
+                "req"
+              ],
+              "text": "내 PC나 다른 누군가가 EC2의 22번 포트로 TCP 연결을 시도한다. 판단에 쓰이는 것은 프로토콜, 포트, 출발지 주소다."
+            },
+            {
+              "focus": [
+                "rules",
+                "match"
+              ],
+              "text": "인스턴스에 연결된 보안 그룹들의 인바운드 규칙을 하나로 합쳐 비교한다. 규칙은 허용(allow)만 있으므로 '맞는 허용 규칙이 있나'만 따진다."
+            },
+            {
+              "focus": [
+                "match",
+                "allow"
+              ],
+              "text": "규칙이 TCP 22, 소스 203.0.113.1/32라면 그 주소에서 온 요청만 일치해 접속된다. /32라서 정확히 그 주소 하나만 해당한다."
+            },
+            {
+              "focus": [
+                "match",
+                "drop"
+              ],
+              "text": "그 밖의 모든 IP는 맞는 허용 규칙이 없어 차단된다. 따로 '나머지 거부' 규칙을 만들 필요가 없다."
+            },
+            {
+              "focus": [
+                "allow",
+                "reply"
+              ],
+              "text": "보안 그룹은 상태 저장(stateful)이라, 허용된 인바운드 요청에 대한 응답은 아웃바운드 규칙과 상관없이 나간다. 반대로 인스턴스가 보낸 요청의 응답도 인바운드 규칙과 상관없이 들어온다."
+            }
+          ]
+        },
+        {
+          "type": "callout",
+          "tone": "warn",
+          "title": "0.0.0.0/0에 22번을 열지 말 것",
+          "text": "AWS 모범 사례(Best practices): 22 (SSH)나 3389 (RDP) 인바운드 규칙에는 특정 IP 범위만 허용한다. 0.0.0.0/0 (IPv4)이나 ::/0 (IPv6)을 지정하면 누구나 어떤 IP에서든 접근할 수 있다. 큰 포트 범위도 열지 않는다."
+        }
+      ]
+    },
+    {
+      "id": "examples",
+      "heading": "용도별 예시 규칙은 어떻게 다른가",
+      "lead": "Amazon EC2 사용 설명서의 예시를 한 표에 모았다. 내 목표에 해당하는 행은 SSH와 DB 행이다.",
+      "blocks": [
+        {
+          "type": "compare",
+          "title": "인바운드 예시 규칙",
+          "derived": true,
+          "columns": [
+            "용도",
+            "프로토콜",
+            "포트",
+            "소스",
+            "누가 들어오나"
+          ],
+          "rows": [
+            [
+              "내 PC에서 SSH (Linux)",
+              "TCP (6)",
+              "22 (SSH)",
+              "내 컴퓨터의 퍼블릭 IPv4 주소 (예: 203.0.113.1/32) 또는 로컬 네트워크 범위",
+              "내 PC만"
+            ],
+            [
+              "내 PC에서 RDP (Windows)",
+              "TCP (6)",
+              "3389 (RDP)",
+              "내 컴퓨터의 퍼블릭 IPv4 주소 또는 로컬 네트워크 범위",
+              "내 PC만"
+            ],
+            [
+              "웹 서버 HTTP",
+              "TCP (6)",
+              "80 (HTTP)",
+              "0.0.0.0/0 (IPv6는 ::/0)",
+              "누구나"
+            ],
+            [
+              "웹 서버 HTTPS",
+              "TCP (6)",
+              "443 (HTTPS)",
+              "0.0.0.0/0 (IPv6는 ::/0)",
+              "누구나"
+            ],
+            [
+              "DB 서버 MySQL/Aurora",
+              "TCP (6)",
+              "3306",
+              "로컬 네트워크 CIDR 또는 DB에 접근할 인스턴스들의 보안 그룹 ID",
+              "지정한 범위나 그룹만"
+            ],
+            [
+              "DB 서버 PostgreSQL",
+              "TCP (6)",
+              "5432",
+              "로컬 네트워크 CIDR 또는 보안 그룹 ID",
+              "지정한 범위나 그룹만"
+            ],
+            [
+              "같은 보안 그룹끼리",
+              "-1 (All)",
+              "-1 (All)",
+              "그 보안 그룹의 ID",
+              "같은 그룹 인스턴스"
+            ],
+            [
+              "ping (ICMP)",
+              "Custom ICMP - IPv4: Echo request",
+              "-",
+              "내 컴퓨터의 퍼블릭 IPv4 주소 등",
+              "지정한 주소"
+            ]
+          ],
+          "highlight": 3
+        },
+        {
+          "type": "callout",
+          "tone": "info",
+          "title": "DB 서버의 다른 기본 포트",
+          "text": "1433 (MS SQL), 5439 (Redshift), 1521 (Oracle). DB 서버의 아웃바운드를 좁히려면(예: 업데이트용 80·443만) 먼저 모든 아웃바운드를 허용하는 기본 규칙을 지워야 한다. 같은 보안 그룹 인스턴스끼리도 통신하려면 그 규칙을 명시적으로 추가해야 한다."
+        }
+      ]
+    },
+    {
+      "id": "sg-reference",
+      "heading": "RDS가 EC2에서 오는 연결만 받게 하려면",
+      "lead": "RDS 보안 그룹의 인바운드 소스에 IP 대신 EC2의 보안 그룹 ID를 넣는다.",
+      "blocks": [
+        {
+          "type": "flow",
+          "title": "내 PC → EC2 → RDS 허용 사슬",
+          "derived": true,
+          "nodes": [
+            {
+              "id": "pc",
+              "label": "내 PC",
+              "kind": "input",
+              "note": "퍼블릭 IP 203.0.113.1"
+            },
+            {
+              "id": "ec2sg",
+              "label": "EC2 보안 그룹",
+              "kind": "concept",
+              "note": "인바운드 TCP 22, 소스 203.0.113.1/32"
+            },
+            {
+              "id": "ec2",
+              "label": "EC2 인스턴스",
+              "kind": "process",
+              "note": "EC2 보안 그룹(sg-ec2)이 연결됨"
+            },
+            {
+              "id": "rdssg",
+              "label": "RDS 보안 그룹",
+              "kind": "concept",
+              "note": "인바운드 TCP 3306, 소스 sg-ec2"
+            },
+            {
+              "id": "rds",
+              "label": "RDS DB",
+              "kind": "store",
+              "note": "sg-ec2 인스턴스의 프라이빗 IP만 받음"
+            }
+          ],
+          "edges": [
+            {
+              "from": "pc",
+              "to": "ec2sg",
+              "label": "SSH 22"
+            },
+            {
+              "from": "ec2sg",
+              "to": "ec2",
+              "label": "허용"
+            },
+            {
+              "from": "ec2",
+              "to": "rdssg",
+              "label": "DB 3306"
+            },
+            {
+              "from": "rdssg",
+              "to": "rds",
+              "label": "허용"
+            }
+          ],
+          "steps": [
+            {
+              "focus": [
+                "pc",
+                "ec2sg"
+              ],
+              "text": "EC2 보안 그룹은 TCP 22를 내 IP /32에서만 허용한다. 내 PC 말고는 SSH 접속이 막힌다."
+            },
+            {
+              "focus": [
+                "ec2"
+              ],
+              "text": "EC2 인스턴스에는 이 보안 그룹(예: sg-ec2)이 연결되어 있다. 이 그룹 ID가 다음 단계에서 '신분증' 역할을 한다."
+            },
+            {
+              "focus": [
+                "ec2",
+                "rdssg"
+              ],
+              "text": "RDS 보안 그룹의 인바운드 규칙은 소스가 IP가 아니라 sg-ec2다. sg-ec2가 연결된 인스턴스들이 프라이빗 IP로 보낸 3306 트래픽만 허용된다."
+            },
+            {
+              "focus": [
+                "rdssg",
+                "rds"
+              ],
+              "text": "EC2가 늘어나도 같은 보안 그룹만 붙이면 규칙을 고칠 필요가 없다. 보안 그룹을 참조하는 규칙은 그룹 크기와 상관없이 규칙 1개로 센다."
+            }
+          ]
+        },
+        {
+          "type": "compare",
+          "title": "AWS 예시: 3계층 구조의 소스 지정",
+          "columns": [
+            "보안 그룹",
+            "허용하는 트래픽",
+            "소스"
+          ],
+          "rows": [
+            [
+              "로드 밸런서 (load balancer)",
+              "HTTP, HTTPS",
+              "0.0.0.0/0 (인터넷)"
+            ],
+            [
+              "웹 서버",
+              "HTTP, HTTPS",
+              "로드 밸런서의 보안 그룹"
+            ],
+            [
+              "DB 서버",
+              "DB 요청",
+              "웹 서버의 보안 그룹"
+            ]
+          ]
+        },
+        {
+          "type": "callout",
+          "tone": "warn",
+          "title": "보안 그룹 참조의 조건과 한계",
+          "text": "- 인바운드 규칙에서 참조하려면 두 보안 그룹이 같은 VPC에 있거나, VPC 피어링(peering) 또는 트랜짓 게이트웨이(transit gateway)로 이어져 있어야 한다.\n- 참조된 그룹의 규칙이 참조하는 그룹에 더해지지는 않는다.\n- 허용되는 것은 참조된 그룹 인스턴스의 **프라이빗 IP** 트래픽이다.\n- 두 인스턴스 사이 트래픽을 미들박스 어플라이언스(middlebox appliance)로 우회시키면 보안 그룹 참조로는 통과하지 않는다. 상대의 프라이빗 IP나 서브넷 CIDR을 소스로 써야 한다.\n- 피어 VPC의 참조 그룹이나 피어링 연결이 삭제되면 그 규칙은 오래된 규칙(stale)으로 표시된다."
+        }
+      ]
+    }
+  ]
+}
+</script>
+
+<script>
+const DATA = JSON.parse(document.getElementById("doc-data").textContent);
+const $page = document.getElementById("page");
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+/* minimal markdown: escaped text, **bold**, `code`, https links, - lists, paragraphs */
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function inline(s) {
+  return String(s).split(/(`[^`]+`)/g).map((p) => /^`[^`]+`$/.test(p) ? "<code>" + esc(p.slice(1, -1)) + "</code>" :
+    esc(p).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/\[([^\]]+)\]\((https:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')).join("");
+}
+function md(src) {
+  const out = []; let para = [], list = [];
+  const flush = () => {
+    if (para.length) { out.push("<p>" + para.map(inline).join("<br>") + "</p>"); para = []; }
+    if (list.length) { out.push("<ul>" + list.map((i) => "<li>" + inline(i) + "</li>").join("") + "</ul>"); list = []; }
+  };
+  for (const line of String(src).split("\n")) {
+    const m = line.match(/^\s*[-*]\s+(.*)/);
+    if (m) { if (para.length) { out.push("<p>" + para.map(inline).join("<br>") + "</p>"); para = []; } list.push(m[1]); }
+    else if (!line.trim()) flush();
+    else { if (list.length) flush(); para.push(line); }
+  }
+  flush();
+  return out.join("");
+}
+
+function blockShell(b, extraClass) {
+  const box = el("div", "block" + (extraClass ? " " + extraClass : ""));
+  if (b.title || b.derived) {
+    const t = el("p", "block-title", b.title || "");
+    if (b.derived) t.append(el("span", "derived", "원문을 바탕으로 정리"));
+    box.append(t);
+  }
+  return box;
+}
+
+function renderStats(items) {
+  const g = el("div", "stats");
+  for (const s of items || []) {
+    const c = el("div", "stat");
+    c.append(el("span", "v", s.value), el("span", "l", s.label));
+    if (s.note) c.append(el("span", "n", s.note));
+    g.append(c);
+  }
+  return g;
+}
+
+function renderCards(b) {
+  const box = blockShell(b);
+  const g = el("div", "cards");
+  for (const c of b.items || []) {
+    const card = el("div", "card");
+    if (c.tag) card.append(el("span", "tag", c.tag));
+    card.append(el("b", null, c.title));
+    if (c.text) card.append(el("span", "t", c.text));
+    g.append(card);
+  }
+  box.append(g);
+  return box;
+}
+
+function cell(tag, v, hl) {
+  const c = el(tag, hl ? "hl" : null);
+  const s = String(v ?? "");
+  if (/^(✓|O|o|예|가능)$/.test(s)) c.append(el("span", "yes", "✓"));
+  else if (/^(✗|X|x|아니오|불가)$/.test(s)) c.append(el("span", "no", "✗"));
+  else c.textContent = s;
+  return c;
+}
+function renderCompare(b) {
+  const box = blockShell(b);
+  const wrap = el("div", "tbl");
+  const t = el("table");
+  const hl = Number.isInteger(b.highlight) ? b.highlight : -1;
+  const thead = el("thead"), tr = el("tr");
+  (b.columns || []).forEach((c, i) => { const th = el("th", i === hl ? "hl" : null, c); th.scope = "col"; tr.append(th); });
+  thead.append(tr);
+  const tbody = el("tbody");
+  for (const row of b.rows || []) {
+    const r = el("tr");
+    row.forEach((v, i) => { const c = cell(i === 0 ? "th" : "td", v, i === hl); if (i === 0) { c.scope = "row"; c.textContent = String(v); } r.append(c); });
+    tbody.append(r);
+  }
+  t.append(thead, tbody);
+  wrap.append(t);
+  box.append(wrap);
+  return box;
+}
+
+function renderCallout(b) {
+  const c = el("div", "callout" + (b.tone === "warn" ? " warn" : ""));
+  c.append(el("p", "label", b.title || (b.tone === "warn" ? "주의" : "참고")));
+  const body = el("div", "md");
+  body.innerHTML = md(b.text || "");
+  c.append(body);
+  return c;
+}
+
+function renderTimeline(b) {
+  const box = blockShell(b);
+  const ol = el("ol", "timeline");
+  for (const it of b.items || []) {
+    const li = el("li", "tl");
+    li.dataset.status = ["done", "now", "next"].includes(it.status) ? it.status : "next";
+    li.append(el("span", "dot"));
+    if (it.when) li.append(el("span", "when", it.when));
+    li.append(el("b", null, it.title));
+    if (it.text) li.append(el("span", "t", it.text));
+    ol.append(li);
+  }
+  box.append(ol);
+  return box;
+}
+
+function renderText(b) {
+  const box = blockShell(b, b.title || b.derived ? "" : "text-block");
+  const d = el("div", "md");
+  d.innerHTML = md(b.md || "");
+  box.append(d);
+  return box;
+}
+
+/* flow: longest-path ranks left → right, SVG wires, step-through highlighting */
+const KIND = { input: "입력", process: "처리", store: "저장", output: "결과", concept: "개념", decision: "판단" };
+let flowSeq = 0;
+function renderFlow(b) {
+  const box = blockShell(b);
+  const uid = "f" + ++flowSeq;
+  const nodes = (b.nodes || []).filter((n) => n && n.id && n.label);
+  const ids = new Set(nodes.map((n) => n.id));
+  const edges = (b.edges || []).filter((e) => ids.has(e.from) && ids.has(e.to) && e.from !== e.to);
+  const steps = (b.steps || []).filter((s) => s && s.text).map((s) => ({ focus: (s.focus || []).filter((x) => ids.has(x)), text: s.text }));
+
+  const rank = Object.fromEntries(nodes.map((n) => [n.id, 0]));
+  for (let k = 0; k < nodes.length; k++) {
+    let changed = false;
+    for (const e of edges) if (rank[e.from] + 1 > rank[e.to] && rank[e.from] + 1 < nodes.length) { rank[e.to] = rank[e.from] + 1; changed = true; }
+    if (!changed) break;
+  }
+  const firstStep = {};
+  steps.forEach((s, i) => s.focus.forEach((id) => { if (!(id in firstStep)) firstStep[id] = i; }));
+
+  const scroll = el("div", "flow-scroll");
+  const flow = el("div", "flow");
+  flow.dataset.dir = "row";
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.classList.add("wires");
+  svg.setAttribute("aria-hidden", "true");
+  flow.append(svg);
+
+  const nodeEls = {};
+  const maxRank = Math.max(0, ...Object.values(rank));
+  for (let r = 0; r <= maxRank; r++) {
+    const col = el("div", "rank");
+    for (const n of nodes.filter((n) => rank[n.id] === r)) {
+      const ne = el("div", "node");
+      ne.dataset.kind = KIND[n.kind] ? n.kind : "concept";
+      ne.append(el("span", "kind", KIND[ne.dataset.kind]), el("b", null, n.label));
+      if (n.note) ne.append(el("small", null, n.note));
+      if (n.id in firstStep) ne.append(el("span", "badge", String(firstStep[n.id] + 1)));
+      nodeEls[n.id] = ne;
+      col.append(ne);
+    }
+    if (col.childElementCount) flow.append(col);
+  }
+  scroll.append(flow);
+  box.append(scroll);
+
+  let wireEls = [], current = -1;
+  const draw = () => {
+    const bx = flow.getBoundingClientRect();
+    if (!bx.width) return;
+    const row = flow.dataset.dir === "row";
+    svg.setAttribute("viewBox", `0 0 ${bx.width} ${bx.height}`);
+    svg.setAttribute("width", bx.width);
+    svg.setAttribute("height", bx.height);
+    svg.replaceChildren();
+    const defs = document.createElementNS(NS, "defs");
+    for (const k of ["off", "on"]) {
+      const mk = document.createElementNS(NS, "marker");
+      mk.setAttribute("id", `${uid}-${k}`);
+      mk.setAttribute("viewBox", "0 0 10 10");
+      mk.setAttribute("refX", "9"); mk.setAttribute("refY", "5");
+      mk.setAttribute("markerWidth", "7"); mk.setAttribute("markerHeight", "7");
+      mk.setAttribute("markerUnits", "userSpaceOnUse");
+      mk.setAttribute("orient", "auto");
+      const p = document.createElementNS(NS, "path");
+      p.setAttribute("d", "M0,0 L10,5 L0,10 z");
+      p.setAttribute("class", "arrow-head" + (k === "on" ? " on" : ""));
+      mk.append(p);
+      defs.append(mk);
+    }
+    svg.append(defs);
+    wireEls = edges.map((e) => {
+      const a = nodeEls[e.from].getBoundingClientRect(), c = nodeEls[e.to].getBoundingClientRect();
+      let x1, y1, x2, y2, d;
+      if (row) {
+        x1 = a.right - bx.left; y1 = a.top + a.height / 2 - bx.top;
+        x2 = c.left - bx.left - 2; y2 = c.top + c.height / 2 - bx.top;
+        const dx = Math.max(28, Math.abs(x2 - x1) / 2);
+        d = `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`;
+      } else {
+        x1 = a.left + a.width / 2 - bx.left; y1 = a.bottom - bx.top;
+        x2 = c.left + c.width / 2 - bx.left; y2 = c.top - bx.top - 2;
+        const dy = Math.max(22, Math.abs(y2 - y1) / 2);
+        d = `M${x1},${y1} C${x1},${y1 + dy} ${x2},${y2 - dy} ${x2},${y2}`;
+      }
+      const path = document.createElementNS(NS, "path");
+      path.setAttribute("d", d);
+      path.setAttribute("class", "wire");
+      svg.append(path);
+      let text = null;
+      if (e.label) {
+        text = document.createElementNS(NS, "text");
+        text.setAttribute("class", "wire-label");
+        text.setAttribute("x", (x1 + x2) / 2 + (row ? 0 : 8));
+        text.setAttribute("y", (y1 + y2) / 2 + (row ? -7 : 4));
+        text.setAttribute("text-anchor", row ? "middle" : "start");
+        text.textContent = e.label;
+        svg.append(text);
+      }
+      return { e, path, text };
+    });
+    apply(current);
+  };
+
+  const stepper = el("div", "stepper");
+  const prev = el("button", null, "이전"); prev.type = "button";
+  const next = el("button"); next.type = "button";
+  const stepText = el("div", "step-text"); stepText.setAttribute("aria-live", "polite");
+  stepper.append(prev, stepText, next);
+  if (steps.length) box.append(stepper);
+
+  const paint = (onNodes, onEdge) => {
+    for (const n of nodes) {
+      const on = onNodes ? onNodes.has(n.id) : false;
+      nodeEls[n.id].classList.toggle("on", on);
+      nodeEls[n.id].classList.toggle("dim", !!onNodes && !on);
+    }
+    for (const w of wireEls) {
+      const on = onNodes ? onEdge(w.e) : false, dim = !!onNodes && !on;
+      w.path.classList.toggle("on", on); w.path.classList.toggle("dim", dim);
+      w.path.setAttribute("marker-end", `url(#${uid}-${on ? "on" : "off"})`);
+      if (w.text) { w.text.classList.toggle("on", on); w.text.classList.toggle("dim", dim); }
+    }
+  };
+  function apply(i) {
+    current = i;
+    stepText.replaceChildren();
+    if (i < 0) {
+      paint(null);
+      stepText.append(el("span", "num", "전체"), "'따라가기'를 누르면 흐름을 한 단계씩 짚어 드려요.");
+    } else {
+      const focus = new Set(steps[i].focus), before = new Set(i > 0 ? steps[i - 1].focus : []);
+      paint(focus, (e) => (focus.has(e.from) && focus.has(e.to)) || (before.has(e.from) && focus.has(e.to)));
+      stepText.append(el("span", "num", `${i + 1} / ${steps.length}`), steps[i].text);
+    }
+    prev.disabled = i < 0;
+    next.disabled = i >= steps.length - 1;
+    next.textContent = i < 0 ? "따라가기" : "다음";
+  }
+  prev.onclick = () => apply(current - 1);
+  next.onclick = () => apply(current + 1);
+
+  new ResizeObserver(() => {
+    const dir = scroll.clientWidth < 520 ? "col" : "row";
+    if (flow.dataset.dir !== dir) flow.dataset.dir = dir;
+    requestAnimationFrame(draw);
+  }).observe(scroll);
+  apply(-1);
+  return box;
+}
+
+const RENDER = { flow: renderFlow, timeline: renderTimeline, compare: renderCompare, cards: renderCards, callout: renderCallout, text: renderText,
+  stats: (b) => { const box = blockShell(b); box.append(renderStats(b.items)); return box; } };
+
+/* page */
+const head = el("header", "doc-head");
+head.append(el("span", "eyebrow", "문서 정리"), el("h1", null, DATA.title));
+if (DATA.subtitle) head.append(el("p", "subtitle", DATA.subtitle));
+if (DATA.source) {
+  const s = el("div", "source");
+  const name = el("span", null, "원문: ");
+  if (DATA.source.url && /^https:\/\//.test(DATA.source.url)) {
+    const a = el("a", null, DATA.source.name || DATA.source.url);
+    a.href = DATA.source.url; a.target = "_blank"; a.rel = "noopener";
+    name.append(a);
+  } else name.append(DATA.source.name || "");
+  s.append(name);
+  if (DATA.source.date) s.append(el("span", null, "정리한 날: " + DATA.source.date));
+  head.append(s);
+}
+$page.append(head);
+
+if (DATA.tldr || (DATA.keypoints || []).length || (DATA.stats || []).length) {
+  const g = el("section", "glance");
+  const t = el("div", "tldr");
+  t.append(el("p", "label", "한 줄 요약"));
+  if (DATA.tldr) t.append(el("p", "lead", DATA.tldr));
+  if ((DATA.keypoints || []).length) {
+    const ul = el("ul");
+    for (const k of DATA.keypoints) { const li = el("li"); li.innerHTML = inline(k); ul.append(li); }
+    t.append(ul);
+  }
+  g.append(t);
+  if ((DATA.stats || []).length) {
+    const w = el("div", "stats-wrap");
+    w.append(el("p", "label", "핵심 수치"), renderStats(DATA.stats));
+    g.append(w);
+  } else g.style.gridTemplateColumns = "1fr";
+  $page.append(g);
+}
+
+const secs = DATA.sections || [];
+if (secs.length > 1) {
+  const nav = el("nav", "toc");
+  nav.setAttribute("aria-label", "목차");
+  secs.forEach((s, i) => { const a = el("a", null, s.heading); a.href = "#" + (s.id || "s" + (i + 1)); nav.append(a); });
+  $page.append(nav);
+}
+
+secs.forEach((s, i) => {
+  const sec = el("section", "sec");
+  sec.id = s.id || "s" + (i + 1);
+  const h = el("div", "sec-head");
+  h.append(el("span", "sec-num", String(i + 1).padStart(2, "0")), el("h2", null, s.heading));
+  if (s.lead) h.append(el("p", "sec-lead", s.lead));
+  sec.append(h);
+  for (const b of s.blocks || []) {
+    const fn = RENDER[b.type];
+    if (fn) sec.append(fn(b));
+  }
+  $page.append(sec);
+});
+
+const foot = el("footer", "foot");
+foot.append(el("span", null, "원문을 바탕으로 정리한 페이지예요. 수치와 조건은 원문 표현을 따랐고, '원문을 바탕으로 정리' 표시가 있는 그림은 원문 내용을 재구성한 거예요."));
+if (DATA.source && DATA.source.url) foot.append(el("span", null, "정확한 최신 내용은 원문에서 확인하세요."));
+$page.append(foot);
+</script>

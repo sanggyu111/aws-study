@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS 기초 과제</title>
+<style>
+:root{
+  --bg:#f7f7f5; --card:#ffffff; --ink:#1d1d1f; --muted:#6b6b70; --line:#d9d9de;
+  --accent:#e8710a; --accent-soft:#fdebd9; --ok:#1f8a4c; --ok-soft:#dff3e7;
+  --block:#c62828; --block-soft:#fbe3e3; --blue:#2563eb; --blue-soft:#e3ecfd;
+  --violet:#7c3aed; --violet-soft:#efe7fd;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141416; --card:#1d1d20; --ink:#ececf0; --muted:#9a9aa3; --line:#34343a;
+    --accent:#ff9a3c; --accent-soft:#3a2614; --ok:#4cc782; --ok-soft:#13301f;
+    --block:#ff6b6b; --block-soft:#3a1717; --blue:#7aa7ff; --blue-soft:#17233d;
+    --violet:#b794ff; --violet-soft:#2a1d45;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141416; --card:#1d1d20; --ink:#ececf0; --muted:#9a9aa3; --line:#34343a;
+  --accent:#ff9a3c; --accent-soft:#3a2614; --ok:#4cc782; --ok-soft:#13301f;
+  --block:#ff6b6b; --block-soft:#3a1717; --blue:#7aa7ff; --blue-soft:#17233d;
+  --violet:#b794ff; --violet-soft:#2a1d45;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard",sans-serif}
+a{color:var(--blue)}
+code{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:.88em}
+.wrap{max-width:1040px;margin:0 auto;padding:28px 16px 56px}
+h1{font-size:30px;margin:0 0 4px;line-height:1.3}
+.sub{color:var(--muted);margin:0}
+h2{font-size:20px;margin:36px 0 10px}
+.lead{color:var(--muted);margin:-4px 0 12px;font-size:15px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+.goals{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.goal{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;position:relative}
+.goal .n{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:800;margin-bottom:6px}
+.goal b{display:block;font-size:16px;line-height:1.4}
+.goal p{margin:4px 0 0;font-size:13.5px;color:var(--muted)}
+svg{width:100%;height:auto;display:block}
+svg text{fill:var(--ink);font-family:inherit}
+.lbl{font-size:12px;fill:var(--muted)} .ttl{font-size:14px;font-weight:700} .sm{font-size:11.5px}
+.comp .bx{fill:var(--card);stroke:var(--ink);stroke-width:1.4}
+.comp.region .bx{fill:none;stroke:var(--muted);stroke-dasharray:6 4}
+.comp.vpc .bx{fill:var(--blue-soft);stroke:var(--blue)}
+.comp.pub .bx{fill:var(--card);stroke:var(--ok)}
+.comp.priv .bx{fill:var(--card);stroke:var(--muted);stroke-dasharray:5 4}
+.comp.sg .bx{fill:var(--ok-soft);stroke:var(--ok);stroke-width:2}
+.comp.dbsg .bx{fill:var(--violet-soft);stroke:var(--violet);stroke-width:2}
+.comp.cw .bx{fill:var(--block-soft);stroke:var(--block)}
+.wire{fill:none;stroke:var(--muted);stroke-width:2} .wire.dash{stroke-dasharray:5 5}
+.mk circle{fill:var(--accent)} .mk text{fill:#fff;font-size:14px;font-weight:800;text-anchor:middle}
+.tbl{width:100%;border-collapse:collapse;font-size:14px}
+.tbl th,.tbl td{border-bottom:1px solid var(--line);padding:9px 8px;text-align:left;vertical-align:top}
+.tbl th{color:var(--muted);font-size:13px;font-weight:600}
+.tbl td:first-child{white-space:nowrap;font-weight:700}
+.scroll{overflow-x:auto}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+.cols h3{margin:0 0 6px;font-size:16px}
+.cols ul{margin:0;padding-left:18px;font-size:14.5px}
+.skip li{margin:3px 0}
+.skip b{color:var(--block)}
+.use b{color:var(--ok)}
+.check{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+.check li{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:14.5px}
+.check li::before{content:"☐ ";color:var(--accent);font-weight:700}
+.cta{display:block;margin-top:28px;text-align:center;background:var(--accent);color:#fff;text-decoration:none;font-weight:700;border-radius:14px;padding:14px}
+.foot{color:var(--muted);font-size:14px;margin-top:20px}
+@media (max-width:640px){h1{font-size:24px}.tbl td:first-child{white-space:normal}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>AWS 기초 과제</h1>
+  <p class="sub">EC2 웹서버 하나를 "나만 들어오고, 침입 시도는 기록되고, DB는 숨겨진" 상태로 만들고 그 위에 Next.js를 띄우기</p>
+
+  <h2>과제 목표 5가지</h2>
+  <div class="goals">
+    <div class="goal"><div class="n">1</div><b>EC2 서버</b><p>AWS에 리눅스 가상 서버 한 대를 켠다.</p></div>
+    <div class="goal"><div class="n">2</div><b>나만 들어오는 방화벽</b><p>내 IP와 내 키를 가진 사람만 서버에 접속할 수 있다.</p></div>
+    <div class="goal"><div class="n">3</div><b>남의 접속 시도 기록</b><p>다른 사람이 들어오려다 막힌 흔적을 로그로 남긴다.</p></div>
+    <div class="goal"><div class="n">4</div><b>게이트웨이를 거치는 DB</b><p>DB의 인바운드·아웃바운드 규칙을 정해, 서버를 거쳐야만 DB에 닿게 한다.</p></div>
+    <div class="goal"><div class="n">5</div><b>Next.js 서버</b><p>내 Next.js 프로젝트를 EC2에서 실행해 브라우저로 연다.</p></div>
+  </div>
+
+  <h2>완성하면 이런 모습</h2>
+  <p class="lead">주황 숫자는 위 목표 번호예요. 내 Mac에서 출발한 요청만 IGW와 보안 그룹을 지나 서버에 닿고, DB는 그 서버 뒤에 숨어 있어요.</p>
+  <div class="card">
+      <svg viewBox="0 0 1100 700" role="img" aria-label="과제 완성 아키텍처">
+        <!-- region -->
+        <g class="comp region" data-step="A">
+          <rect class="bx" x="330" y="14" width="756" height="672" rx="16"/>
+          <text class="lbl" x="350" y="38">AWS 서울 리전 (ap-northeast-2)</text>
+        </g>
+        <!-- vpc -->
+        <g class="comp vpc" data-step="C">
+          <rect class="bx" x="440" y="54" width="630" height="490" rx="14"/>
+          <text class="ttl" x="460" y="80">aws-study-vpc</text>
+          <text class="lbl" x="580" y="80">10.0.0.0/16</text>
+        </g>
+        <g class="comp" data-step="C">
+          <rect class="bx" x="470" y="92" width="300" height="34" rx="9"/>
+          <text class="sm" x="484" y="114">rtb-public: 0.0.0.0/0 → igw</text>
+        </g>
+        <g class="comp pub" data-step="C">
+          <rect class="bx" x="500" y="138" width="550" height="200" rx="12"/>
+          <text class="ttl" x="516" y="162">public 서브넷 (2a·2b)</text>
+          <text class="lbl" x="516" y="180">인터넷 경로 있음</text>
+        </g>
+        <g class="comp priv" data-step="C">
+          <rect class="bx" x="500" y="352" width="550" height="176" rx="12"/>
+          <text class="ttl" x="516" y="376">private 서브넷 (2a·2b)</text>
+          <text class="lbl" x="516" y="394">인터넷 경로 없음</text>
+        </g>
+        <!-- security groups -->
+        <g class="comp sg" data-step="D">
+          <rect class="bx" x="640" y="190" width="396" height="138" rx="12"/>
+          <text class="ttl" x="654" y="210">web-sg</text>
+          <text class="sm" x="712" y="210">22·80 ← 내 IP만</text>
+        </g>
+        <g class="comp dbsg" data-step="D">
+          <rect class="bx" x="640" y="404" width="396" height="112" rx="12"/>
+          <text class="ttl" x="654" y="424">db-sg</text>
+          <text class="sm" x="704" y="424">3306 ← web-sg 만</text>
+        </g>
+        <!-- ec2 -->
+        <g class="comp" data-step="E">
+          <rect class="bx" x="660" y="218" width="362" height="100" rx="10"/>
+          <text class="ttl" x="674" y="238">EC2 aws-study-web</text>
+          <text class="sm" x="830" y="238">t3.micro · 사설 10.0.x.x</text>
+        </g>
+        <g class="comp" data-step="F">
+          <rect class="bx" x="946" y="250" width="64" height="56" rx="8"/>
+          <text class="sm" x="978" y="274" text-anchor="middle">swap</text>
+          <text class="sm" x="978" y="292" text-anchor="middle">2GB</text>
+        </g>
+        <g class="comp" data-step="J">
+          <rect class="bx" x="674" y="250" width="120" height="56" rx="8"/>
+          <text class="ttl" x="734" y="274" text-anchor="middle">Nginx</text>
+          <text class="sm" x="734" y="292" text-anchor="middle">:80</text>
+        </g>
+        <g class="comp" data-step="J">
+          <rect class="bx" x="806" y="250" width="130" height="56" rx="8"/>
+          <text class="ttl" x="871" y="274" text-anchor="middle">Next.js</text>
+          <text class="sm" x="871" y="292" text-anchor="middle">:3000 · pm2</text>
+          <path class="wire" d="M794 278 L806 278"/>
+        </g>
+        <!-- rds -->
+        <g class="comp" data-step="H">
+          <rect class="bx" x="660" y="436" width="362" height="68" rx="10"/>
+          <text class="ttl" x="674" y="460">RDS MySQL aws-study-db</text>
+          <text class="sm" x="674" y="482">db.t3.micro · 퍼블릭 액세스 아니요 · studydb</text>
+        </g>
+        <g class="comp" data-step="I">
+          <path class="wire dash" d="M960 318 L960 436"/>
+          <text class="sm" x="968" y="384">SQL</text>
+        </g>
+        <!-- igw -->
+        <g class="comp" data-step="C">
+          <rect class="bx" x="388" y="268" width="104" height="56" rx="10"/>
+          <text class="ttl" x="440" y="292" text-anchor="middle">IGW</text>
+          <text class="sm" x="440" y="310" text-anchor="middle">aws-study-igw</text>
+        </g>
+        <!-- cloudwatch -->
+        <g class="comp cw" data-step="G">
+          <rect class="bx" x="640" y="572" width="396" height="90" rx="12"/>
+          <text class="ttl" x="656" y="598">CloudWatch · aws-study-flowlogs</text>
+          <text class="sm" x="656" y="620">VPC 흐름 로그 · 필터 REJECT · 보존 1주</text>
+          <text class="sm" x="656" y="640">로그 관리 · 로그 분석(Insights)</text>
+        </g>
+        <!-- outside: mac, internet, stranger, github, budgets -->
+        <g class="comp" data-step="0">
+          <rect class="bx" x="16" y="250" width="160" height="100" rx="12"/>
+          <text class="ttl" x="32" y="276">내 Mac</text>
+          <text class="sm" x="32" y="298">터미널 · 브라우저</text>
+          <text class="sm" x="32" y="316">~/.ssh/aws-study-key.pem</text>
+        </g>
+        <g class="comp" data-step="0">
+          <ellipse class="bx" cx="268" cy="300" rx="46" ry="30"/>
+          <text class="ttl" x="268" y="305" text-anchor="middle">인터넷</text>
+          <path class="wire" d="M176 300 L222 300 M314 300 L388 300"/>
+        </g>
+        <g class="comp" data-step="G">
+          <rect class="bx" x="16" y="440" width="160" height="64" rx="12" style="stroke:var(--block)"/>
+          <text class="ttl" x="32" y="466">모르는 IP들</text>
+          <text class="sm" x="32" y="486">스캐너 · 봇</text>
+        </g>
+        <g class="comp" data-step="J">
+          <rect class="bx" x="16" y="70" width="160" height="70" rx="12"/>
+          <text class="ttl" x="32" y="98">GitHub</text>
+          <text class="sm" x="32" y="118">내 Next.js 저장소</text>
+        </g>
+        <g class="comp" data-step="B">
+          <rect class="bx" x="16" y="580" width="290" height="80" rx="12"/>
+          <text class="ttl" x="32" y="606">결제 알림 (Budgets)</text>
+          <text class="sm" x="32" y="626">제로 지출 예산 · 계정 전체</text>
+          <text class="sm" x="32" y="644">→ 내 이메일로 알림</text>
+        </g>
+        <g class="mk"><circle cx="1040" cy="232" r="13"/><text x="1040" y="237">1</text></g>
+        <g class="mk"><circle cx="626" cy="196" r="13"/><text x="626" y="201">2</text></g>
+        <g class="mk"><circle cx="1050" cy="586" r="13"/><text x="1050" y="591">3</text></g>
+        <g class="mk"><circle cx="1050" cy="420" r="13"/><text x="1050" y="425">4</text></g>
+        <g class="mk"><circle cx="871" cy="324" r="13"/><text x="871" y="329">5</text></g>
+      </svg>
+  </div>
+
+  <h2>목표별로 무엇을 쓰고, 어떻게 확인하나</h2>
+  <div class="card scroll">
+    <table class="tbl">
+      <thead><tr><th>목표</th><th>사용하는 것</th><th>다 됐는지 확인하는 방법</th></tr></thead>
+      <tbody>
+        <tr><td>1 EC2 서버</td><td>VPC(public 서브넷) · EC2 t3.micro · Amazon Linux 2023</td><td>인스턴스 상태 <b>실행 중</b>, 퍼블릭 IP가 있음</td></tr>
+        <tr><td>2 나만 접속</td><td>보안 그룹 <code>web-sg</code>(22·80 ← 내 IP /32) + 키 페어(.pem)</td><td>내 Mac에서 <code>ssh -i 키 ec2-user@IP</code> 성공, 키 없이 또는 다른 IP에서는 실패</td></tr>
+        <tr><td>3 시도 기록</td><td>VPC 흐름 로그(필터 REJECT) → CloudWatch 로그 그룹</td><td>로그 그룹에 모르는 IP의 <code>REJECT</code> 줄이 쌓임, Logs Insights로 IP별 횟수 조회</td></tr>
+        <tr><td>4 숨은 DB</td><td>RDS MySQL · private 서브넷 · 퍼블릭 액세스 <b>아니요</b> · <code>db-sg</code>(3306 ← web-sg만)</td><td>EC2에서는 <code>mysql</code> 접속·조회 성공, Mac에서 직접은 접속 불가</td></tr>
+        <tr><td>5 Next.js</td><td>Node + pnpm 빌드(standalone) · pm2 · Nginx(80 → 3000)</td><td>브라우저 <code>http://퍼블릭IP</code>에 내 페이지, 응답 헤더 <code>Server: nginx</code> · <code>X-Powered-By: Next.js</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>조건: 무료 플랜, 최소 비용</h2>
+  <p class="lead">새 계정의 무료 플랜 크레딧 안에서 끝내는 것이 조건이에요. 그래서 일부러 쓰지 않는 것이 있어요.</p>
+  <div class="cols">
+    <div class="card use"><h3>✓ 쓰는 것</h3><ul>
+      <li><b>EC2 t3.micro</b>: 프리 티어 대상, 크레딧 사양 "표준"</li>
+      <li><b>RDS db.t3.micro</b>: 프리 티어 템플릿, 단일 AZ, 20GB</li>
+      <li><b>흐름 로그 REJECT만</b>: 로그 양 최소, 보존 1주</li>
+      <li><b>IGW · 보안 그룹 · 라우팅 테이블</b>: 무료</li>
+      <li><b>Budgets 제로 지출 예산</b>: 요금이 생기면 바로 알림</li>
+    </ul></div>
+    <div class="card skip"><h3>✕ 쓰지 않는 것</h3><ul>
+      <li><b>NAT 게이트웨이</b>: 켜 두기만 해도 시간당 요금</li>
+      <li><b>탄력적 IP · 로드 밸런서</b>: 서버 1대에는 필요 없음, 요금 발생</li>
+      <li><b>Multi-AZ · 스토리지 자동 조정</b>: 무료 범위를 넘김</li>
+      <li><b>Secrets Manager</b>: 비밀 1개당 매달 요금</li>
+      <li><b>Vercel 등 외부 배포</b>: 과제는 "내 EC2"에서 띄우는 것</li>
+    </ul></div>
+  </div>
+
+  <h2>시작 전에 필요한 것</h2>
+  <ul class="check">
+    <li>Mac과 터미널 (Windows라면 PowerShell의 <code>ssh</code>)</li>
+    <li>AWS 가입용 이메일과 해외 결제 가능한 카드</li>
+    <li>스마트폰 인증 앱 (MFA용)</li>
+    <li>GitHub에 올린 Next.js 프로젝트 (<code>next.config</code>에 <code>output: "standalone"</code>)</li>
+    <li>3~4시간 (RDS 생성 대기 10~15분 포함)</li>
+  </ul>
+
+  <h2>제출 전 최종 점검</h2>
+  <ul class="check">
+    <li>EC2 화면: 인스턴스 유형 t3.micro, 보안 그룹 web-sg, 인바운드 소스가 <code>내IP/32</code></li>
+    <li>터미널: SSH 접속 화면 (<code>[ec2-user@ip-10-0-…]$</code>)</li>
+    <li>CloudWatch: 흐름 로그 REJECT 기록 또는 Logs Insights 결과 표</li>
+    <li>RDS 화면: 퍼블릭 액세스 "아니요", 보안 그룹 db-sg, db-sg 인바운드 소스 = web-sg</li>
+    <li>EC2에서 실행한 <code>SELECT * FROM hello;</code> 결과</li>
+    <li>브라우저: <code>http://퍼블릭IP</code>로 열린 Next.js 페이지</li>
+    <li>끝나면 EC2·RDS 중지 또는 삭제 (RDS는 중지 7일 뒤 자동으로 켜짐)</li>
+  </ul>
+
+  <a class="cta" href="10-과제-따라하기-가이드.html">단계별 따라하기 가이드 열기 →</a>
+  <p class="foot">함께 보기: <a href="09-과제-해결-과정.html">09 실제 진행 기록</a> · <a href="00-3일-공부계획표.html">00 계획표</a> · <a href="01-VPC-기본구조.html">01 VPC</a> · <a href="03-보안그룹.html">03 보안 그룹</a> · <a href="05-VPC-흐름로그.html">05 흐름 로그</a> · <a href="06-RDS-접근제어.html">06 RDS</a> · <a href="07-Nextjs-셀프호스팅.html">07 Next.js</a></p>
+</div>
+</body>
+</html>

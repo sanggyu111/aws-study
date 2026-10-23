@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWS 과제 해결 과정</title>
+<style>
+:root{
+  --bg:#f7f7f5; --card:#ffffff; --ink:#1d1d1f; --muted:#6b6b70; --line:#d9d9de;
+  --accent:#e8710a; --accent-soft:#fdebd9; --ok:#1f8a4c; --ok-soft:#dff3e7;
+  --block:#c62828; --block-soft:#fbe3e3; --blue:#2563eb; --blue-soft:#e3ecfd;
+  --violet:#7c3aed; --violet-soft:#efe7fd;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141416; --card:#1d1d20; --ink:#ececf0; --muted:#9a9aa3; --line:#34343a;
+    --accent:#ff9a3c; --accent-soft:#3a2614; --ok:#4cc782; --ok-soft:#13301f;
+    --block:#ff6b6b; --block-soft:#3a1717; --blue:#7aa7ff; --blue-soft:#17233d;
+    --violet:#b794ff; --violet-soft:#2a1d45;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141416; --card:#1d1d20; --ink:#ececf0; --muted:#9a9aa3; --line:#34343a;
+  --accent:#ff9a3c; --accent-soft:#3a2614; --ok:#4cc782; --ok-soft:#13301f;
+  --block:#ff6b6b; --block-soft:#3a1717; --blue:#7aa7ff; --blue-soft:#17233d;
+  --violet:#b794ff; --violet-soft:#2a1d45;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard",sans-serif}
+a{color:var(--blue)}
+code{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:.88em;word-break:break-all}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;overflow-x:auto;font-size:13px;margin:8px 0 0;line-height:1.55}
+.top{max-width:1240px;margin:0 auto;padding:28px 16px 8px}
+h1{font-size:28px;margin:0 0 4px;line-height:1.3}
+.sub{color:var(--muted);margin:0}
+/* goal chips */
+.goals{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin:18px 0 6px}
+.goal{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px}
+.goal b{display:block;color:var(--ok)}
+/* timeline nav */
+.nav{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.nav-in{max-width:1240px;margin:0 auto;padding:10px 16px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin}
+.nav button{flex:0 0 auto;font:inherit;font-size:13px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:5px 11px;cursor:pointer;white-space:nowrap}
+.nav button.done{border-color:color-mix(in srgb,var(--ok) 50%,var(--line))}
+.nav button.done::before{content:"✓ ";color:var(--ok)}
+.nav button.now{background:var(--accent);border-color:var(--accent);color:#fff}
+.nav button.now::before{content:"● "}
+.nav button.todo{color:var(--muted);border-style:dashed}
+/* layout */
+.layout{max-width:1240px;margin:0 auto;padding:16px;display:grid;grid-template-columns:1fr;gap:20px}
+@media (min-width:1000px){.layout{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}.diagram{position:sticky;top:64px;align-self:start}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+.diagram .card{padding:14px}
+svg{width:100%;height:auto;display:block}
+svg text{fill:var(--ink);font-family:inherit}
+.lbl{font-size:12px;fill:var(--muted)}
+.ttl{font-size:14px;font-weight:700}
+.sm{font-size:11.5px}
+/* components */
+.comp{transition:opacity .35s}
+.comp.ghost{opacity:.13}
+.comp .bx{fill:var(--card);stroke:var(--ink);stroke-width:1.4}
+.comp.region .bx{fill:none;stroke:var(--muted);stroke-dasharray:6 4}
+.comp.vpc .bx{fill:var(--blue-soft);stroke:var(--blue)}
+.comp.pub .bx{fill:var(--card);stroke:var(--ok)}
+.comp.priv .bx{fill:var(--card);stroke:var(--muted);stroke-dasharray:5 4}
+.comp.sg .bx{fill:var(--ok-soft);stroke:var(--ok);stroke-width:2}
+.comp.dbsg .bx{fill:var(--violet-soft);stroke:var(--violet);stroke-width:2}
+.comp.cw .bx{fill:var(--block-soft);stroke:var(--block)}
+.comp.now .bx{stroke:var(--accent)!important;stroke-width:3.2!important}
+.comp.now{animation:glow 1.6s ease-in-out infinite}
+@keyframes glow{50%{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--accent) 70%,transparent))}}
+.wire{fill:none;stroke:var(--muted);stroke-width:2}
+.wire.dash{stroke-dasharray:5 5}
+.comp.now .wire{stroke:var(--accent);stroke-width:3;stroke-dasharray:8 6;animation:flow .6s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-14}}
+/* packet */
+#pkt{opacity:0;transition:opacity .2s}
+#pkt.show{opacity:1}
+#pkt circle.core{stroke:var(--card);stroke-width:2.5}
+#pkt circle.halo{opacity:.25;animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{r:20}}
+#pkt text{fill:#fff;font-size:8px;font-weight:700}
+#tag{opacity:0;transition:opacity .2s}
+#tag.show{opacity:1}
+#tag rect{fill:var(--ink);opacity:.92}
+#tag text{fill:var(--bg);font-size:11px;font-weight:600}
+.fx{opacity:0;transform-box:fill-box;transform-origin:center}
+.fx.show{animation:pop .45s cubic-bezier(.2,1.6,.4,1) forwards}
+@keyframes pop{0%{opacity:0;transform:scale(.3)}100%{opacity:1;transform:scale(1)}}
+.controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.controls button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:7px 12px;cursor:pointer}
+.controls button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.counter{color:var(--muted);font-size:13px}
+.caption{margin-top:10px;padding:12px 14px;border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:8px;font-size:14.5px;min-height:78px}
+.caption b{display:block;margin-bottom:2px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:4px}
+/* steps */
+.steps{display:grid;gap:16px}
+.step{scroll-margin-top:70px;border-left:4px solid var(--line)}
+.step.active{border-left-color:var(--accent)}
+.step-h{display:flex;gap:12px;align-items:flex-start}
+.badge{flex:0 0 auto;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-weight:800;background:var(--blue-soft);color:var(--blue);font-size:18px}
+.step.active .badge{background:var(--accent);color:#fff}
+.step h2{font-size:19px;margin:0;line-height:1.35}
+.step .why{color:var(--muted);font-size:14px;margin:2px 0 0}
+.status{display:inline-block;font-size:12px;border-radius:999px;padding:1px 8px;margin-left:6px;vertical-align:2px;background:var(--ok-soft);color:var(--ok);font-weight:600}
+.status.now{background:var(--accent-soft);color:var(--accent)}
+h3{font-size:14px;color:var(--muted);margin:16px 0 6px;letter-spacing:.02em}
+ol.did{margin:0;padding-left:20px}
+ol.did li{margin:2px 0}
+.qa{display:grid;gap:6px}
+.q{font-size:14px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.q b{color:var(--accent)}
+.kw{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px}
+.k{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card)}
+.k dt{font-weight:700;font-size:14.5px}
+.k dt::before{content:"#";color:var(--accent);margin-right:2px}
+.k dd{margin:3px 0 0;font-size:13.5px;color:var(--muted)}
+.show-btn{margin-left:auto;font:inherit;font-size:12.5px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:4px 10px;cursor:pointer;flex:0 0 auto}
+.foot{max-width:1240px;margin:0 auto;padding:8px 16px 48px;color:var(--muted);font-size:14px}
+@media (max-width:640px){h1{font-size:23px}.card{padding:14px}.step h2{font-size:17px}}
+@media (prefers-reduced-motion: reduce){.comp.now,.comp.now .wire,#pkt circle.halo{animation:none}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>AWS 과제 해결 과정</h1>
+  <p class="sub">2026-10-22 ~ 10-23 · 서울 리전 · 무료 플랜 · 직접 진행한 순서 그대로</p>
+  <div class="goals">
+    <div class="goal"><b>✓ 목표 1</b>EC2 서버 만들기</div>
+    <div class="goal"><b>✓ 목표 2</b>나만 들어오기 (보안 그룹 + 키)</div>
+    <div class="goal"><b>✓ 목표 3</b>다른 사람의 진입 시도 기록 (흐름 로그)</div>
+    <div class="goal"><b>✓ 목표 4</b>게이트웨이를 거쳐야 닿는 DB (RDS)</div>
+    <div class="goal"><b>✓ 목표 5</b>Next.js 서버 (hotel_booking)</div>
+  </div>
+</div>
+
+<nav class="nav" aria-label="단계"><div class="nav-in" id="nav"></div></nav>
+
+<div class="layout">
+  <!-- ================= DIAGRAM ================= -->
+  <div class="diagram">
+    <div class="card">
+      <svg viewBox="0 0 1100 700" role="img" aria-label="과제 아키텍처가 단계별로 쌓이는 그림">
+        <!-- region -->
+        <g class="comp region" data-step="A">
+          <rect class="bx" x="330" y="14" width="756" height="672" rx="16"/>
+          <text class="lbl" x="350" y="38">AWS 서울 리전 (ap-northeast-2)</text>
+        </g>
+        <!-- vpc -->
+        <g class="comp vpc" data-step="C">
+          <rect class="bx" x="440" y="54" width="630" height="490" rx="14"/>
+          <text class="ttl" x="460" y="80">aws-study-vpc</text>
+          <text class="lbl" x="580" y="80">10.0.0.0/16</text>
+        </g>
+        <g class="comp" data-step="C">
+          <rect class="bx" x="470" y="92" width="300" height="34" rx="9"/>
+          <text class="sm" x="484" y="114">rtb-public: 0.0.0.0/0 → igw</text>
+        </g>
+        <g class="comp pub" data-step="C">
+          <rect class="bx" x="500" y="138" width="550" height="200" rx="12"/>
+          <text class="ttl" x="516" y="162">public 서브넷 (2a·2b)</text>
+          <text class="lbl" x="516" y="180">인터넷 경로 있음</text>
+        </g>
+        <g class="comp priv" data-step="C">
+          <rect class="bx" x="500" y="352" width="550" height="176" rx="12"/>
+          <text class="ttl" x="516" y="376">private 서브넷 (2a·2b)</text>
+          <text class="lbl" x="516" y="394">인터넷 경로 없음</text>
+        </g>
+        <!-- security groups -->
+        <g class="comp sg" data-step="D">
+          <rect class="bx" x="640" y="190" width="396" height="138" rx="12"/>
+          <text class="ttl" x="654" y="210">web-sg</text>
+          <text class="sm" x="712" y="210">22·80 ← 내 IP만</text>
+        </g>
+        <g class="comp dbsg" data-step="D">
+          <rect class="bx" x="640" y="404" width="396" height="112" rx="12"/>
+          <text class="ttl" x="654" y="424">db-sg</text>
+          <text class="sm" x="704" y="424">3306 ← web-sg 만</text>
+        </g>
+        <!-- ec2 -->
+        <g class="comp" data-step="E">
+          <rect class="bx" x="660" y="218" width="362" height="100" rx="10"/>
+          <text class="ttl" x="674" y="238">EC2 aws-study-web</text>
+          <text class="sm" x="830" y="238">t3.micro · 10.0.3.25</text>
+        </g>
+        <g class="comp" data-step="F">
+          <rect class="bx" x="946" y="250" width="64" height="56" rx="8"/>
+          <text class="sm" x="978" y="274" text-anchor="middle">swap</text>
+          <text class="sm" x="978" y="292" text-anchor="middle">2GB</text>
+        </g>
+        <g class="comp" data-step="J">
+          <rect class="bx" x="674" y="250" width="120" height="56" rx="8"/>
+          <text class="ttl" x="734" y="274" text-anchor="middle">Nginx</text>
+          <text class="sm" x="734" y="292" text-anchor="middle">:80</text>
+        </g>
+        <g class="comp" data-step="J">
+          <rect class="bx" x="806" y="250" width="130" height="56" rx="8"/>
+          <text class="ttl" x="871" y="274" text-anchor="middle">Next.js</text>
+          <text class="sm" x="871" y="292" text-anchor="middle">:3000 · pm2</text>
+          <path class="wire" d="M794 278 L806 278"/>
+        </g>
+        <!-- rds -->
+        <g class="comp" data-step="H">
+          <rect class="bx" x="660" y="436" width="362" height="68" rx="10"/>
+          <text class="ttl" x="674" y="460">RDS MySQL aws-study-db</text>
+          <text class="sm" x="674" y="482">db.t3.micro · 퍼블릭 액세스 아니요 · studydb</text>
+        </g>
+        <g class="comp" data-step="I">
+          <path class="wire dash" d="M960 318 L960 436"/>
+          <text class="sm" x="968" y="384">SQL</text>
+        </g>
+        <!-- igw -->
+        <g class="comp" data-step="C">
+          <rect class="bx" x="388" y="268" width="104" height="56" rx="10"/>
+          <text class="ttl" x="440" y="292" text-anchor="middle">IGW</text>
+          <text class="sm" x="440" y="310" text-anchor="middle">aws-study-igw</text>
+        </g>
+        <!-- cloudwatch -->
+        <g class="comp cw" data-step="G">
+          <rect class="bx" x="640" y="572" width="396" height="90" rx="12"/>
+          <text class="ttl" x="656" y="598">CloudWatch · aws-study-flowlogs</text>
+          <text class="sm" x="656" y="620">VPC 흐름 로그 · 필터 REJECT · 보존 1주</text>
+          <text class="sm" x="656" y="640">로그 관리 · 로그 분석(Insights)</text>
+        </g>
+        <!-- outside: mac, internet, stranger, github, budgets -->
+        <g class="comp" data-step="0">
+          <rect class="bx" x="16" y="250" width="160" height="100" rx="12"/>
+          <text class="ttl" x="32" y="276">내 Mac</text>
+          <text class="sm" x="32" y="298">터미널 · 브라우저</text>
+          <text class="sm" x="32" y="316">~/.ssh/aws-study-key.pem</text>
+        </g>
+        <g class="comp" data-step="0">
+          <ellipse class="bx" cx="268" cy="300" rx="46" ry="30"/>
+          <text class="ttl" x="268" y="305" text-anchor="middle">인터넷</text>
+          <path class="wire" d="M176 300 L222 300 M314 300 L388 300"/>
+        </g>
+        <g class="comp" data-step="G">
+          <rect class="bx" x="16" y="440" width="160" height="64" rx="12" style="stroke:var(--block)"/>
+          <text class="ttl" x="32" y="466">모르는 IP들</text>
+          <text class="sm" x="32" y="486">스캐너 · 봇</text>
+        </g>
+        <g class="comp" data-step="J">
+          <rect class="bx" x="16" y="70" width="160" height="70" rx="12"/>
+          <text class="ttl" x="32" y="98">GitHub</text>
+          <text class="sm" x="32" y="118">sanggyu111/hotel_booking</text>
+        </g>
+        <g class="comp" data-step="B">
+          <rect class="bx" x="16" y="580" width="290" height="80" rx="12"/>
+          <text class="ttl" x="32" y="606">결제 알림 (Budgets)</text>
+          <text class="sm" x="32" y="626">제로 지출 예산 · 계정 전체</text>
+          <text class="sm" x="32" y="644">→ example+aws@gmail.com</text>
+        </g>
+
+        <!-- motion layer -->
+        <g id="routes" style="visibility:hidden"></g>
+        <text class="fx" id="fx-ok" x="616" y="296" font-size="26" fill="var(--ok)" font-weight="800">✓</text>
+        <text class="fx" id="fx-x" x="612" y="300" font-size="28" fill="var(--block)" font-weight="800">✕</text>
+        <text class="fx" id="fx-key" x="1000" y="240" font-size="20">🔓</text>
+        <text class="fx" id="fx-db" x="1030" y="476" font-size="20">✓</text>
+        <text class="fx" id="fx-web" x="900" y="240" font-size="12" font-weight="700" fill="var(--ok)">200 OK</text>
+        <g id="tag"><rect width="10" height="22" rx="6"/><text x="8" y="15"></text></g>
+        <g id="pkt"><circle class="halo" r="14"/><circle class="core" r="11"/><text text-anchor="middle" y="3">SSH</text></g>
+      </svg>
+      <div class="legend">
+        <span><i style="background:var(--accent)"></i>지금 단계에서 만든 것</span>
+        <span><i style="background:var(--line)"></i>이미 만든 것</span>
+        <span><i style="background:var(--line);opacity:.3"></i>아직 안 만든 것</span>
+      </div>
+      <div class="controls">
+        <button id="prev">← 이전</button>
+        <button id="next" class="primary">다음 →</button>
+        <button id="play">▶ 처음부터 자동 재생</button>
+        <button id="replay">↻ 이 단계 다시</button>
+        <span class="counter" id="counter"></span>
+      </div>
+      <div class="caption" id="caption"></div>
+    </div>
+  </div>
+
+  <!-- ================= STEPS ================= -->
+  <div class="steps" id="steps">
+
+    <section class="card step" id="s-0" data-step="0">
+      <div class="step-h"><div class="badge">0</div><div><h2>계정 준비 <span class="status">완료</span></h2><p class="why">6개월 동안 쓰지 않아 닫힌 계정 대신 새 계정을 만들고 로그인하기</p></div><button class="show-btn" data-go="0">그림 보기</button></div>
+      <h3>한 일</h3>
+      <ol class="did">
+        <li>IAM 사용자 이름이 기억나지 않음 → 루트 사용자와 IAM 사용자의 차이 확인</li>
+        <li>예전 계정은 무료 플랜이 끝난 뒤 비활성화됨 → 같은 이메일로는 다시 가입할 수 없음 확인</li>
+        <li><code>example+aws@gmail.com</code>(플러스 주소)로 새 계정 가입</li>
+        <li>다음 날 로그인 화면에서 "인증 실패" → 빈 칸으로 로그인을 눌렀던 것. 계정 ID <code>123456789012</code> / 사용자 <code>study-user</code>로 로그인</li>
+      </ol>
+      <h3>내가 했던 질문</h3>
+      <div class="qa">
+        <div class="q"><b>Q.</b> IAM username이 뭐야? 새로 계정을 만들 수 있나?</div>
+        <div class="q"><b>Q.</b> 비활성화된 계정의 이메일로 로그인이 안 되나?</div>
+        <div class="q"><b>Q.</b> <code>example+aws@gmail.com</code> 이런 식으로 하는 거야? 문제 없어?</div>
+      </div>
+      <h3>핵심 키워드</h3>
+      <dl class="kw">
+        <div class="k"><dt>루트 사용자</dt><dd>가입할 때 쓴 이메일로 로그인하는 계정 주인이에요. 모든 권한이 있어서 평소에는 쓰지 않고, MFA를 꼭 켜 둬요.</dd></div>
+        <div class="k"><dt>IAM 사용자</dt><dd>루트 사용자가 만들어 주는 하위 사용자예요. <b>계정 ID(12자리) + 사용자 이름 + 암호</b>로 로그인해요.</dd></div>
+        <div class="k"><dt>플러스 주소</dt><dd><code>이름+단어@gmail.com</code>은 같은 메일함으로 오지만, AWS는 <b>다른 이메일</b>로 취급해요. 로그인할 때도 <code>+aws</code>까지 똑같이 입력해야 해요.</dd></div>
+        <div class="k"><dt>무료 플랜</dt><dd>2025년 7월부터 바뀐 제도예요. 크레딧을 받아 쓰다가 <b>6개월이 지나거나 크레딧이 떨어지면</b> 계정이 닫히고, 90일 안에 유료 플랜으로 바꾸지 않으면 완전히 해지돼요.</dd></div>
+        <div class="k"><dt>MFA / 2FA</dt><dd>비밀번호 다음에 인증 앱의 6자리 숫자(30초마다 바뀜)를 한 번 더 확인하는 방식이에요. Vercel 로그인에서 본 화면도 같은 거예요.</dd></div>
+      </dl>
+    </section>
+
+    <section class="card step" id="s-A" data-step="A">
+      <div class="step-h"><div class="badge">A</div><div><h2>리전 확인 <span class="status">완료</span></h2><p class="why">모든 자원을 같은 지역(서울)에 만들기 위해</p></div><button class="show-btn" data-go="A">그림 보기</button></div>
+      <h3>한 일</h3>
+      <ol class="did"><li>콘솔 오른쪽 위가 <b>아시아 태평양 (서울)</b>인지 확인</li><li>EC2 대시보드에서 가용 영역 2a·2b·2c·2d 확인</li></ol>
+      <h3>핵심 키워드</h3>
+      <dl class="kw">
+        <div class="k"><dt>리전</dt><dd>AWS 데이터센터가 모인 지역이에요. 리전마다 자원이 따로 보여서, 다른 리전을 선택하면 만든 게 "사라진 것처럼" 보여요.</dd></div>
+        <div class="k"><dt>가용 영역 (AZ)</dt><dd>한 리전 안에 떨어져 있는 데이터센터 묶음이에요. RDS는 AZ 2곳에 서브넷이 있어야 만들 수 있어요.</dd></div>
+      </dl>
+    </section>
+
+    <section class="card step" id="s-B" data-step="B">
+      <div class="step-h"><div class="badge">B</div><div><h2>결제 알림 <span class="status">완료</span></h2><p class="why">돈이 1센트라도 나가기 시작하면 바로 알기 위해</p></div><button class="show-btn" data-go="B">그림 보기</button></div>
+      <h3>한 일</h3>
+      <ol class="did"><li>검색창에 Budgets를 입력했지만 서비스로 안 나옴</li><li><b>Billing and Cost Management → 예산</b>으로 들어가서 <b>제로 지출 예산</b> 생성</li></ol>
+      <h3>내가 했던 질문</h3>
+      <div class="qa"><div class="q"><b>Q.</b> 이 화면에서 B 단계부터 해야 돼? (Budgets 검색 결과에 서비스가 안 보임)</div></div>
+      <h3>핵심 키워드</h3>
+      <dl class="kw">
+        <div class="k"><dt>AWS Budgets</dt><dd>독립 서비스가 아니라 <b>Billing and Cost Management 안의 기능</b>이에요. 그래서 검색하면 문서만 나왔어요.</dd></div>
+        <div class="k"><dt>제로 지출 예산</dt><dd>실제 요금이 0을 넘는 순간 메일을 보내 주는 템플릿이에요. 무료 플랜 학습용으로 가장 알맞아요.</dd></div>
+        <div class="k"><dt>결제 정보 접근 권한</dt><dd>IAM 사용자는 기본적으로 결제 화면을 못 볼 수 있어요. 막히면 루트 사용자로 들어가서 설정해요.</dd></div>
+      </dl>
+    </section>
+
+    <section class="card step" id="s-C" data-step="C">
+      <div class="step-h"><div class="badge">C</div><div><h2>VPC 만들기 <span class="status">완료</span></h2><p class="why">서버는 인터넷 쪽에, DB는 숨은 쪽에 둘 나만의 네트워크</p></div><button class="show-btn" data-go="C">그림 보기</button></div>
+      <h3>한 일</h3>
+      <ol class="did">
+        <li>"VPC 등" 마법사: AZ 2, public 2, private 2, <b>NAT 없음</b>, 엔드포인트 없음</li>
+        <li>첫 시도(<code>awsstudy</code>)는 생성하지 않고 다시 <code>aws-study-vpc</code>로 생성</li>
+        <li>기본 VPC(172.31.0.0/16) 화면을 보고 헷갈림 → 과제용 VPC와 구분</li>
+        <li>리소스 맵에 라우팅 테이블이 4개 보임 → 기본(main) 라우팅 테이블 확인</li>
+      </ol>
+      <h3>내가 했던 질문</h3>
+      <div class="qa">
+        <div class="q"><b>Q.</b> 내가 얘기한 목표를 수행할 수 있는 설정이야? (기본 VPC 화면)</div>
+        <div class="q"><b>Q.</b> 이렇게 연결되어 있으면 돼? 기본이랑 aws-study 두 개만 있으면 되는 거지?</div>
+        <div class="q"><b>Q.</b> 라우팅 테이블이 3개였는데 4개가 됐어. rtb-0ccc…는 뭐야?</div>
+      </div>
+      <h3>핵심 키워드</h3>
+      <dl class="kw">
+        <div class="k"><dt>VPC · CIDR</dt><dd>AWS 안에 만든 나만의 네트워크예요. <code>10.0.0.0/16</code>은 이 안에서 쓸 사설 주소 범위예요.</dd></div>
+        <div class="k"><dt>기본 VPC</dt><dd>AWS가 처음부터 만들어 둔 VPC(<code>172.31.0.0/16</code>)예요. 서브넷이 <b>모두 퍼블릭</b>이라 DB를 숨길 수 없어요. 지우지 말고 그대로 둬요.</dd></div>
+        <div class="k"><dt>퍼블릭 / 프라이빗 서브넷</dt><dd>라우팅 테이블에 <code>0.0.0.0/0 → igw</code> 경로가 <b>있으면 퍼블릭, 없으면 프라이빗</b>이에요. 이름이 아니라 경로가 결정해요.</dd></div>
+        <div class="k"><dt>인터넷 게이트웨이 (IGW)</dt><dd>VPC와 인터넷 사이의 대문이에요. 공인 IP와 사설 IP를 서로 바꿔 줘요. 요금은 없어요.</dd></div>
+        <div class="k"><dt>라우팅 테이블</dt><dd>"이 목적지로 가려면 어디로 보낼지" 적은 표예요. 서브넷마다 하나씩 연결돼요.</dd></div>
+        <div class="k"><dt>기본(main) 라우팅 테이블</dt><dd>VPC를 만들면 자동으로 생기는 이름 없는 예비 테이블이에요. 연결된 서브넷이 없고, 지울 수도 없고, 무료예요.</dd></div>
+        <div class="k"><dt>NAT 게이트웨이</dt><dd>프라이빗 서브넷이 인터넷으로 <b>나가게</b> 해 주는 장치예요. 켜 두기만 해도 시간당 요금이 나가서 이번에는 만들지 않았어요.</dd></div>
+        <div class="k"><dt>S3 게이트웨이 엔드포인트</dt><dd>첫 시도에서 기본값으로 생겼던 것이에요. S3로 가는 전용 길이고 무료예요.</dd></div>
+      </dl>
+    </section>
+
+    <section class="card step" id="s-D" data-step="D">
+      <div class="step-h"><div class="badge">D</div><div><h2>보안 그룹 2개 <span class="status">완료</span></h2><p class="why">"나만 들어오기"와 "DB는 서버만"을 정하는 방화벽</p></div><button class="show-btn" data-go="D">그림 보기</button></div>
+      <h3>한 일</h3>
+      <ol class="did">
+        <li><b>web-sg</b>: SSH 22, HTTP 80 → 소스 <b>내 IP</b></li>
+        <li><b>db-sg</b>: MYSQL/Aurora 3306 → 소스 <b>web-sg</b></li>
+        <li>두 그룹 모두 VPC ID가 <code>vpc-0123456789abcdef0</code>인지 확인 (db-sg 설명 오타 <code>daabase</code>는 동작에 영향 없음)</li>
+      </ol>
+      <h3>핵심 키워드</h3>
+      <dl class="kw">
+        <div class="k"><dt>보안 그룹</dt><dd>EC2·RDS 같은 자원에 붙이는 방화벽이에요. 허용 규칙만 적고, 적지 않은 건 모두 막혀요.</dd></div>
+        <div class="k"><dt>Stateful (상태 기억)</dt><dd>들어온 요청의 <b>응답</b>은 아웃바운드 규칙과 상관없이 자동으로 나가요. 그래서 db-sg 아웃바운드는 비워도 돼요.</dd></div>
+        <div class="k"><dt>내 IP /32</dt><dd>지금 내 공유기의 공인 IP 딱 하나만이라는 뜻이에요. 와이파이를 바꾸면 IP가 달라져서 SSH가 막힐 수 있어요.</dd></div>
+        <div class="k"><dt>보안 그룹 참조</dt><dd>소스를 IP 대신 <b>web-sg</b>로 정하면, "web-sg를 단 자원만" 허용돼요. 서버 IP가 바뀌어도 규칙이 계속 맞아요.</dd></div>
+        <div class="k"><dt>NACL</dt><dd>서브넷 단위 방화벽이에요. 상태를 기억하지 않아서(stateless) 응답 포트까지 직접 열어야 해요. 이번에는 기본값(전체 허용) 그대로 뒀어요.</dd></div>
+      </dl>
+    </section>
+
+    <section class="card step" id="s-E" data-step="E">
+      <div class="step-h"><div class="badge">E</div><div><h2>EC2 만들고 SSH 접속 <span class="status">완료</span></h2><p class="why">서버를 켜고, 키 파일로 나만 들어가기</p></div><button class="show-btn" data-go="E">그림 보기</button></div>
+      <h3>한 일</h3>
+      <ol class="did">
+        <li>Amazon Linux 2023 · <b>t3.micro</b> · 키 페어 <code>aws-study-key</code>(ED25519, .pem)</li>
+        <li>네트워크 편집: aws-study-vpc · public1 · 퍼블릭 IP 활성화 · <b>기존 보안 그룹 web-sg</b></li>
+        <li>스토리지 20GB gp3 · 크레딧 사양 <b>표준</b></li>
+        <li>퍼블릭 IPv4 <code>203.0.113.10</code> 확인 → <code>ssh -i … ec2-user@203.0.113.10</code> 접속 성공 (<code>ip-10-0-3-25</code>)</li>
+      </ol>
+      <h3>내가 했던 질문</h3>
+      <div class="qa">
+        <div class="q"><b>Q.</b> key pair가 뭐야? 이름 입력하라는데</div>
+        <div class="q"><b>Q.</b> 퍼블릭 IPv4 주소 어디서 확인해?</div>
+        <div class="q"><b>Q.</b> <code>ssh … ec2-user@&lt;203.0.113.10&gt;</code> 이렇게 입력하는 거 맞아?</div>
+        <div class="q"><b>Q.</b> ssh로 -i로 시작하는 명령어가 뭘 의미하는 거야?</div>
+      </div>
+      <h3>핵심 키워드</h3>
+      <dl class="kw">
+        <div class="k"><dt>AMI</dt><dd>서버에 깔 운영체제 이미지예요. Amazon Linux 2023의 기본 사용자는 <code>ec2-user</code>예요.</dd></div>
+        <div class="k"><dt>인스턴스 유형 t3.micro</dt><dd>2 vCPU · 1GB 메모리. 새 계정의 프리 티어 대상이에요.</dd></div>
+        <div class="k"><dt>크레딧 사양 표준</dt><dd>t3의 기본값은 "무제한"이라 CPU를 많이 쓰면 추가 요금이 나올 수 있어요. 표준이면 느려질 뿐 돈은 더 나가지 않아요.</dd></div>
+        <div class="k"><dt>키 페어</dt><dd>비밀번호 대신 쓰는 열쇠 한 쌍이에요. <b>공개 키(자물쇠)</b>는 서버에, <b>개인 키(.pem)</b>는 내 Mac에 있어요. .pem 파일은 다시 받을 수 없어요.</dd></div>
+        <div class="k"><dt>chmod 400</dt><dd>"나만 읽기, 남은 아무것도 못 함" 권한이에요. 권한이 열려 있으면 ssh가 키를 거부해요.</dd></div>
+        <div class="k"><dt>퍼블릭 vs 프라이빗 IP</dt><dd>Mac에서는 <b>퍼블릭</b>(43.203…)으로 접속해요. 10.0.x.x는 VPC 안에서만 쓰는 주소예요. 인스턴스를 중지했다 켜면 퍼블릭 IP가 바뀌어요.</dd></div>
+        <div class="k"><dt>ssh -i 키 사용자@주소</dt><dd><code>-i</code>는 identity file, 즉 신분증 파일이에요. 문장으로 읽으면 "이 열쇠를 들고, 이 주소의 이 사용자로 암호화된 통로를 열어 줘"예요.</dd></div>
+        <div class="k"><dt>&lt; &gt; 는 빼기</dt><dd>설명서의 꺾쇠는 "여기에 값을 넣으세요"라는 표시예요. 터미널에서 <code>&lt;</code>는 "파일에서 읽기"라는 특수 기호라 그대로 넣으면 오류가 나요.</dd></div>
+      </dl>
+    </section>
+
+    <section class="card step" id="s-F" data-step="F">
+      <div class="step-h"><div class="badge">F</div><div><h2>서버 기본 세팅 (swap) <span class="status">완료</span></h2><p class="why">메모리 1GB로 Next.js를 빌드하려면 여유 공간이 필요해서</p></div><button class="show-btn" data-go="F">그림 보기</button></div>
+      <h3>한 일</h3>
+      <ol class="did">
+        <li><code>dnf update</code> → 이미 최신</li>
+        <li>2GB 스왑 파일 생성 → <code>free -h</code>에 Swap 0B</li>
+        <li>원인: <code>swapon</code>을 빠뜨림 + fstab에 <code>dfaults</code> 오타 → <code>sed</code>로 수정하고 <code>swapon -a</code></li>
+      </ol>
+      <h3>내가 했던 질문</h3>
+      <div class="qa"><div class="q"><b>Q.</b> 2.0Gi가 안 보이는데?</div></div>
+      <h3>핵심 키워드</h3>
+      <dl class="kw">
+        <div class="k"><dt>스왑 (swap)</dt><dd>메모리가 모자랄 때 디스크 일부를 메모리처럼 빌려 쓰는 공간이에요. 느리지만 빌드가 <code>Killed</code>로 죽는 걸 막아 줘요.</dd></div>
+        <div class="k"><dt>mkswap vs swapon</dt><dd><code>mkswap</code>은 스왑으로 쓸 <b>준비</b>, <code>swapon</code>은 실제로 <b>켜기</b>예요. 준비만 하면 0B로 나와요.</dd></div>
+        <div class="k"><dt>/etc/fstab</dt><dd>서버가 켜질 때 읽는 설정 파일이에요. 오타가 있으면 재부팅 후 스왑이 안 켜져요. <code>swapon -a</code>로 설정이 맞는지 미리 확인할 수 있어요.</dd></div>
+        <div class="k"><dt>복사해서 붙여넣기</dt><dd>명령어는 직접 타이핑하지 말고 복사해서 붙여 넣기. 이번 오타가 남긴 교훈이에요.</dd></div>
+      </dl>
+    </section>
+
+    <section class="card step" id="s-G" data-step="G">
+      <div class="step-h"><div class="badge">G</div><div><h2>흐름 로그: 진입 시도 기록 <span class="status">완료</span></h2><p class="why">"다른 사람이 들어오려 한 흔적"을 남기는 과제 목표</p></div><button class="show-btn" data-go="G">그림 보기</button></div>
+      <h3>한 일</h3>
+      <ol class="did">
+        <li>CloudWatch 로그 그룹 <code>aws-study-flowlogs</code> (보존 1주). 메뉴 이름이 <b>로그 관리</b>로 바뀌어 있어서 찾느라 헤맴</li>
+        <li>VPC 흐름 로그: 필터 <b>거부(REJECT)</b> · 집계 1분 · CloudWatch로 전송</li>
+        <li>로그 확인 → 모르는 IP들의 REJECT 기록이 대량으로 쌓임</li>
+      </ol>
+      <h3>내가 했던 질문</h3>
+      <div class="qa">
+        <div class="q"><b>Q.</b> 로그 그룹 배너를 못 찾겠어 / 왼쪽 탭에서 어디야?</div>
+        <div class="q"><b>Q.</b> 로그가 많던데?</div>
+        <div class="q"><b>Q.</b> 왜 이렇게 많은 IP가 이 가상 서버에 들어오려고 해? 일반적인 거야?</div>
+      </div>
+      <h3>핵심 키워드</h3>
+      <dl class="kw">
+        <div class="k"><dt>VPC 흐름 로그</dt><dd>VPC 안 네트워크 인터페이스를 오간 연결을 한 줄씩 기록해요. 필터를 REJECT로 두면 "막힌 시도"만 남아요.</dd></div>
+        <div class="k"><dt>레코드 읽는 법</dt><dd><code>… 출발IP 도착IP 출발포트 도착포트 6 패킷 바이트 시작 끝 REJECT OK</code>. 프로토콜 6은 TCP예요.</dd></div>
+        <div class="k"><dt>로그 그룹 · 보존 기간</dt><dd>로그를 담는 통이에요. 기본값 "만기 없음"이면 계속 쌓이니까 1주로 줄였어요.</dd></div>
+        <div class="k"><dt>인터넷 배경 소음</dt><dd>공개 IP라면 몇 분 안에 스캐너와 봇이 모든 포트를 두드려요. IPv4는 약 43억 개뿐이라 전체를 훑는 데 오래 걸리지 않아요. <b>정상이고, 다 막히고 있다는 증거</b>예요.</dd></div>
+        <div class="k"><dt>패킷 1개 · 40~60바이트</dt><dd>"똑똑" 한 번 두드리고 대답이 없으면 떠난 흔적이에요. 연결은 되지 않았어요.</dd></div>
+        <div class="k"><dt>UTC</dt><dd>로그 시간은 세계 표준시예요. 한국 시간은 +9시간(04:29Z = 13:29)이고, 화면에서 로컬 시간대로 바꿀 수 있어요.</dd></div>
+        <div class="k"><dt>로그 분석 (Logs Insights)</dt><dd>쿼리로 "누가 몇 번 시도했나"를 표로 볼 수 있어요. 예: <code>stats count(*) by srcAddr, dstPort</code></dd></div>
+      </dl>
+    </section>
+
+    <section class="card step" id="s-H" data-step="H">
+      <div class="step-h"><div class="badge">H</div><div><h2>RDS MySQL (프라이빗) <span class="status">완료</span></h2><p class="why">DB를 인터넷에서 보이지 않는 곳에 두기</p></div><button class="show-btn" data-go="H">그림 보기</button></div>
+      <h3>한 일</h3>
+      <ol class="did">
+        <li>DB 서브넷 그룹 <code>aws-study-db-subnet</code>: <b>private 서브넷 2개만</b></li>
+        <li>MySQL · 프리 티어 템플릿 · 단일 AZ · db.t3.micro · 자격 증명 <b>자체 관리</b> · 20GB · 자동 확장 끄기</li>
+        <li>VPC aws-study-vpc · <b>퍼블릭 액세스 아니요</b> · 보안 그룹 <b>db-sg</b> · 초기 DB <code>studydb</code></li>
+        <li>백업 1일 · 삭제 방지 끄기 · InnoDB 경고는 그대로 진행</li>
+      </ol>
+      <h3>내가 했던 질문</h3>
+      <div class="qa">
+        <div class="q"><b>Q.</b> 자동 백업은 InnoDB에서만 가능하다는데?</div>
+        <div class="q"><b>Q.</b> 월별 예상 비용은 따로 안 나왔어</div>
+      </div>
+      <h3>핵심 키워드</h3>
+      <dl class="kw">
+        <div class="k"><dt>DB 서브넷 그룹</dt><dd>RDS가 놓일 수 있는 서브넷 목록이에요. 자동으로 만들게 두면 public 서브넷까지 들어가서, 미리 private만 넣었어요.</dd></div>
+        <div class="k"><dt>퍼블릭 액세스 아니요</dt><dd>DB에 공인 IP를 주지 않아요. 인터넷에서는 DB 주소가 보이지도 않아요.</dd></div>
+        <div class="k"><dt>InnoDB vs MyISAM</dt><dd>MySQL의 저장 방식이에요. MySQL 5.5부터 기본값은 <b>InnoDB</b>(트랜잭션, 충돌 복구)이고, 따로 적지 않으면 InnoDB라서 경고는 무시해도 돼요.</dd></div>
+        <div class="k"><dt>자체 관리 자격 증명</dt><dd>Secrets Manager를 고르면 매달 별도 요금이 나가요. 암호는 직접 정하고 메모해요.</dd></div>
+        <div class="k"><dt>스토리지 자동 조정</dt><dd>용량이 모자라면 알아서 늘어나는 기능이에요. 무료 범위를 넘을 수 있어서 껐어요.</dd></div>
+        <div class="k"><dt>RDS 중지 7일</dt><dd>RDS는 중지해도 <b>7일 뒤 자동으로 다시 켜져요</b>. 과제를 마치면 삭제해요.</dd></div>
+      </dl>
+    </section>
+
+    <section class="card step" id="s-I" data-step="I">
+      <div class="step-h"><div class="badge">I</div><div><h2>EC2 → RDS 접속 확인 <span class="status">완료</span></h2><p class="why">"게이트웨이(서버)를 거쳐야만 DB에 닿는다"를 확인</p></div><button class="show-btn" data-go="I">그림 보기</button></div>
+      <h3>한 일</h3>
+      <ol class="did">
+        <li>EC2에 <code>mariadb105</code> 클라이언트 설치</li>
+        <li><code>mysql -h &lt;엔드포인트&gt; -u admin -p</code> 접속</li>
+        <li><code>SHOW DATABASES</code> → studydb 확인 → <code>hello</code> 테이블 생성, INSERT, SELECT → <b>from ec2</b> 출력</li>
+      </ol>
+      <h3>핵심 키워드</h3>
+      <dl class="kw">
+        <div class="k"><dt>RDS 엔드포인트</dt><dd>DB의 주소 이름(<code>…rds.amazonaws.com</code>)이에요. VPC 안에서는 사설 IP로 바뀌어요.</dd></div>
+        <div class="k"><dt>MySQL 클라이언트</dt><dd>DB에 말을 거는 프로그램이에요. MariaDB 클라이언트로도 MySQL에 접속할 수 있어요.</dd></div>
+        <div class="k"><dt>점프 서버 구조</dt><dd>인터넷 → EC2 → DB 순서로만 닿아요. Mac에서 바로 접속이 안 되는 게 <b>정상</b>이에요. 필요하면 SSH 터널(<code>ssh -L</code>)로 EC2를 거쳐 접속해요.</dd></div>
+      </dl>
+    </section>
+
+    <section class="card step" id="s-J" data-step="J">
+      <div class="step-h"><div class="badge">J</div><div><h2>Next.js 배포 (hotel_booking) <span class="status">완료</span></h2><p class="why">내 프론트엔드를 내 서버에서 띄우기</p></div><button class="show-btn" data-go="J">그림 보기</button></div>
+      <h3>한 일</h3>
+      <ol class="did">
+        <li>GitHub <code>hotel_booking/frontend</code> 검토: Next.js 16.3.8, typecheck와 build 통과, standalone 출력</li>
+        <li>EC2: Node 24(nvm) · corepack + pnpm · <code>git clone</code> → <code>pnpm build</code></li>
+        <li><code>public</code>, <code>.next/static</code>을 standalone 폴더로 복사 → pm2 <code>hotel</code> 실행</li>
+        <li>Nginx :80 → :3000 연결 → <code>http://203.0.113.10</code>에서 "어디에서 머물까요?" 확인</li>
+        <li>Vercel 2FA 로그인 → Vercel 프로젝트 삭제 (GitHub과 EC2는 영향 없음)</li>
+      </ol>
+      <h3>내가 했던 질문</h3>
+      <div class="qa">
+        <div class="q"><b>Q.</b> 내 GitHub 프론트엔드가 Next.js로 잘 만들어졌는지 확인하고 연결하고 싶어</div>
+        <div class="q"><b>Q.</b> Vercel 로그인할 때 6자리 코드를 넣으라는데 뭐야?</div>
+        <div class="q"><b>Q.</b> Vercel 배포를 지우면 GitHub에 영향이 없고, EC2 주소로는 계속 들어갈 수 있지?</div>
+        <div class="q"><b>Q.</b> 그럼 43.203.~ 주소에서 그 화면이 보이는 건 뭐야?</div>
+      </div>
+      <h3>핵심 키워드</h3>
+      <dl class="kw">
+        <div class="k"><dt>engines · Node 24</dt><dd><code>package.json</code>에 정해 둔 Node 버전이에요. nvm으로 정확히 24를 설치했어요.</dd></div>
+        <div class="k"><dt>pnpm · corepack</dt><dd>이 프로젝트의 패키지 매니저예요. corepack이 <code>packageManager</code>에 적힌 버전을 자동으로 맞춰 줘요.</dd></div>
+        <div class="k"><dt>output: standalone</dt><dd>실행에 필요한 파일만 모아 줘요. 단 <b>정적 파일(CSS·JS)과 public은 직접 복사</b>해야 화면이 깨지지 않아요.</dd></div>
+        <div class="k"><dt>pm2</dt><dd>앱을 뒤에서 계속 켜 두고, 죽으면 다시 살려 주는 관리자예요. SSH 창을 닫아도 서버가 꺼지지 않아요.</dd></div>
+        <div class="k"><dt>Nginx 리버스 프록시</dt><dd>80번으로 받은 요청을 서버 안쪽 3000번으로 넘겨 줘요. 3000번은 인터넷에 열지 않아요.</dd></div>
+        <div class="k"><dt>응답 헤더로 확인하기</dt><dd><code>Server: nginx</code> + <code>X-Powered-By: Next.js</code> → Vercel이 아니라 <b>내 EC2</b>가 보낸 페이지예요.</dd></div>
+        <div class="k"><dt>Vercel vs EC2</dt><dd>둘 다 GitHub 코드를 가져다 쓰는 <b>별개의 복사본</b>이에요. 하나를 지워도 다른 쪽과 저장소에는 영향이 없어요.</dd></div>
+        <div class="k"><dt>2FA 복구 코드</dt><dd>인증 앱을 잃었을 때 쓰는 일회용 코드예요. 2FA를 켤 때 받아서 안전한 곳에 보관해요.</dd></div>
+      </dl>
+    </section>
+
+    <section class="card step" id="s-K" data-step="K">
+      <div class="step-h"><div class="badge">K</div><div><h2>마무리: 정리와 비용 관리 <span class="status now">지금</span></h2><p class="why">과제를 끝내고 크레딧이 새지 않게 하기</p></div><button class="show-btn" data-go="K">그림 보기</button></div>
+      <h3>할 일</h3>
+      <ol class="did">
+        <li>안 쓸 때는 EC2 <b>중지</b> (다시 켜면 퍼블릭 IP가 바뀜)</li>
+        <li>과제 제출이 끝나면 RDS <b>삭제</b> (최종 스냅샷 만들지 않기)</li>
+        <li>흐름 로그 → 로그 그룹 → EC2 → VPC 순서로 삭제</li>
+        <li>Billing → 프리 티어 / 크레딧 화면에서 사용량 확인</li>
+        <li>다음 확장: Spring 백엔드를 붙이면 "브라우저 → Nginx → Next.js → Spring → RDS"</li>
+      </ol>
+      <h3>핵심 키워드</h3>
+      <dl class="kw">
+        <div class="k"><dt>중지 vs 종료</dt><dd>중지는 꺼 두기(디스크 요금은 조금 나감), 종료는 삭제예요. 종료하면 되돌릴 수 없어요.</dd></div>
+        <div class="k"><dt>삭제 순서</dt><dd>다른 자원이 쓰고 있는 것은 지워지지 않아요. 안쪽(RDS, EC2)부터 바깥(VPC) 순서로 지워요.</dd></div>
+      </dl>
+    </section>
+  </div>
+</div>
+
+<p class="foot">관련 자료: <a href="00-3일-공부계획표.html">00 계획표</a> · <a href="01-VPC-기본구조.html">01 VPC</a> · <a href="03-보안그룹.html">03 보안 그룹</a> · <a href="05-VPC-흐름로그.html">05 흐름 로그</a> · <a href="06-RDS-접근제어.html">06 RDS</a> · <a href="07-Nextjs-셀프호스팅.html">07 Next.js</a> · <a href="08-진행기록-SSH접속까지.html">08 SSH 접속 흐름</a></p>
+
+<script>
+const ORDER=["0","A","B","C","D","E","F","G","H","I","J","K"];
+const NOW="K";
+const NAMES={"0":"계정 준비","A":"리전","B":"결제 알림","C":"VPC","D":"보안 그룹","E":"EC2 + SSH","F":"swap","G":"흐름 로그","H":"RDS","I":"DB 접속","J":"Next.js","K":"마무리"};
+// 각 단계의 모션: 패킷 경로들(순서대로 재생)과 설명
+const MOTION={
+ "0":{cap:"계정 준비: 내 Mac에서 AWS 콘솔에 로그인. 아직 AWS 안에는 아무것도 없어요.",runs:[]},
+ "A":{cap:"리전 확인: 앞으로 만드는 모든 것이 이 점선 상자(서울 리전) 안에 들어가요.",runs:[]},
+ "B":{cap:"결제 알림: 실제 요금이 0을 넘으면 Budgets가 메일을 보내요. 리전과 상관없이 계정 전체를 지켜봐요.",
+      runs:[{d:"M160 580 L160 470 L96 470 L96 350",lbl:"✉",cls:"mail",tag:"요금 발생 시 알림 메일"}]},
+ "C":{cap:"VPC: IGW(대문) → rtb-public(경로표) → public 서브넷까지 길이 생겼어요. private 서브넷에는 인터넷 길이 없어요.",
+      runs:[{d:"M314 300 L388 300 L492 300 L540 300 L540 240",lbl:"길",cls:"",tag:"0.0.0.0/0 → igw"}]},
+ "D":{cap:"보안 그룹: web-sg는 '내 IP만', db-sg는 'web-sg를 단 것만' 들여보내는 검문소예요. 아직 문 안에 서버는 없어요.",runs:[]},
+ "E":{cap:"SSH 접속: Mac → 인터넷 → IGW(공인→사설 IP) → web-sg 검문(내 IP ✓) → EC2 키 인증(🔓)",
+      runs:[{d:"M176 300 L388 300 L492 300 L636 300",lbl:"SSH",cls:"",tag:"내 IP → 203.0.113.10:22",fx:"ok"},
+            {d:"M636 300 L660 300 L760 236",lbl:"SSH",cls:"",tag:"🔑 키 서명 확인",fx:"key"}]},
+ "F":{cap:"swap: EC2 안에 디스크를 빌린 2GB 여유 메모리가 생겼어요. Next.js 빌드할 때 쓰여요.",runs:[]},
+ "G":{cap:"흐름 로그: 모르는 IP가 22번을 두드리면 web-sg에서 차단(✕)되고, 그 기록이 CloudWatch 로그 그룹에 REJECT로 남아요.",
+      runs:[{d:"M176 472 L600 472 L600 300 L630 300",lbl:"???",cls:"bad",tag:"모르는 IP → :22",fx:"x"},
+            {d:"M630 320 L620 320 L620 617 L640 617",lbl:"LOG",cls:"bad",tag:"REJECT 기록"}]},
+ "H":{cap:"RDS: private 서브넷 안, db-sg 뒤에 DB가 생겼어요. 공인 IP가 없어서 인터넷에서는 보이지 않아요.",runs:[]},
+ "I":{cap:"DB 접속: EC2에서 보낸 SQL이 db-sg 검문(web-sg 출신 ✓)을 지나 RDS에 닿았어요. 결과는 'from ec2'.",
+      runs:[{d:"M960 318 L960 470",lbl:"SQL",cls:"db",tag:"web-sg → db-sg :3306",fx:"db"}]},
+ "J":{cap:"Next.js: EC2가 GitHub에서 코드를 받아 빌드 → 브라우저 요청이 Nginx(:80)를 거쳐 Next.js(:3000)로 → 200 OK",
+      runs:[{d:"M176 105 L300 105 L300 270 L388 280 L492 280 L700 280",lbl:"git",cls:"git",tag:"git clone hotel_booking"},
+            {d:"M176 300 L388 300 L492 300 L636 300 L700 290",lbl:"HTTP",cls:"",tag:"GET http://203.0.113.10",fx:"ok"},
+            {d:"M734 290 L871 290",lbl:"HTTP",cls:"",tag:"proxy_pass → 127.0.0.1:3000",fx:"web"},
+            {d:"M871 300 L871 312 L492 312 L388 312 L176 312",lbl:"200",cls:"ret",tag:"머무름 — 호텔 객실 예약"}]},
+ "K":{cap:"마무리: 지금까지 만든 전체 구조예요. 쓰지 않을 때는 EC2를 중지하고, 과제가 끝나면 안쪽부터 삭제해요.",runs:[]}
+};
+const COLORS={"":"var(--accent)",bad:"var(--block)",db:"var(--violet)",ret:"var(--blue)",git:"var(--ink)",mail:"var(--ok)"};
+
+const NS="http://www.w3.org/2000/svg";
+const comps=[...document.querySelectorAll('.comp')];
+const nav=document.getElementById('nav'), cap=document.getElementById('caption'), cnt=document.getElementById('counter');
+const pkt=document.getElementById('pkt'), tag=document.getElementById('tag'), tagT=tag.querySelector('text'), tagR=tag.querySelector('rect');
+const routes=document.getElementById('routes');
+const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+let cur=ORDER.indexOf(NOW), raf=0, timers=[], playing=false, fromScroll=false;
+
+ORDER.forEach((s,i)=>{
+  const b=document.createElement('button');
+  b.textContent=(s==="0"?"0":s)+" "+NAMES[s];
+  b.dataset.step=s;
+  b.onclick=()=>{stopPlay();go(i,true);};
+  nav.appendChild(b);
+});
+
+function clearMotion(){
+  cancelAnimationFrame(raf); timers.forEach(clearTimeout); timers=[];
+  pkt.classList.remove('show'); tag.classList.remove('show');
+  document.querySelectorAll('.fx').forEach(f=>f.classList.remove('show'));
+}
+function setTag(t,x,y){
+  tagT.textContent=t; let w=120; try{w=tagT.getComputedTextLength()+16;}catch(e){}
+  tagR.setAttribute('width',w);
+  const tx=Math.max(4,Math.min(1096-w,x-w/2)), ty=Math.max(4,y-40);
+  tag.setAttribute('transform','translate('+tx+','+ty+')');
+}
+function ease(t){return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;}
+function runOne(r,done){
+  const p=document.createElementNS(NS,'path'); p.setAttribute('d',r.d); routes.appendChild(p);
+  const L=p.getTotalLength(), dur=reduce?0:Math.max(800,L*5.5), t0=performance.now();
+  const col=COLORS[r.cls||""];
+  pkt.querySelectorAll('circle').forEach(c=>c.style.fill=col);
+  pkt.querySelector('text').textContent=r.lbl;
+  pkt.querySelector('text').style.fill=(r.cls==="git")?"var(--bg)":"#fff";
+  pkt.classList.add('show'); tag.classList.add('show');
+  function f(now){
+    const k=dur?Math.min(1,(now-t0)/dur):1, pt=p.getPointAtLength(ease(k)*L);
+    pkt.setAttribute('transform','translate('+pt.x+','+pt.y+')'); setTag(r.tag,pt.x,pt.y);
+    if(k<1) raf=requestAnimationFrame(f);
+    else { routes.removeChild(p); if(r.fx) document.getElementById('fx-'+r.fx).classList.add('show'); done(); }
+  }
+  raf=requestAnimationFrame(f);
+}
+function runAll(list,onEnd){
+  let i=0;
+  function nextRun(){
+    if(i>=list.length){ timers.push(setTimeout(()=>{pkt.classList.remove('show');tag.classList.remove('show');onEnd&&onEnd();}, reduce?0:900)); return; }
+    const r=list[i++]; runOne(r,()=>timers.push(setTimeout(nextRun, reduce?0:450)));
+  }
+  nextRun();
+}
+function render(){
+  const s=ORDER[cur];
+  comps.forEach(c=>{
+    const k=ORDER.indexOf(c.dataset.step);
+    c.classList.toggle('ghost',k>cur);
+    c.classList.toggle('now',k===cur && s!=="K");
+  });
+  [...nav.children].forEach((b,i)=>{
+    b.className=i===cur?'now':(i<ORDER.indexOf(NOW)||ORDER[i]===NOW?'done':'todo');
+    if(ORDER[i]===NOW && i!==cur) b.className='todo';
+  });
+  nav.children[cur].scrollIntoView({block:'nearest',inline:'center',behavior:reduce?'auto':'smooth'});
+  document.querySelectorAll('.step').forEach(el=>el.classList.toggle('active',el.dataset.step===s));
+  cap.innerHTML='<b>'+(s==="0"?"0":s)+'. '+NAMES[s]+'</b>'+MOTION[s].cap;
+  cnt.textContent=(cur+1)+' / '+ORDER.length;
+}
+function go(i,scroll){
+  cur=Math.max(0,Math.min(ORDER.length-1,i));
+  clearMotion(); render();
+  if(scroll){ fromScroll=true; document.getElementById('s-'+ORDER[cur]).scrollIntoView({block:'start'}); setTimeout(()=>fromScroll=false,900); }
+  runAll(MOTION[ORDER[cur]].runs, ()=>{
+    if(playing){ timers.push(setTimeout(()=>{ if(cur<ORDER.length-1) go(cur+1,true); else stopPlay(); }, reduce?2500:1200)); }
+  });
+}
+function stopPlay(){playing=false;document.getElementById('play').textContent='▶ 처음부터 자동 재생';}
+document.getElementById('prev').onclick=()=>{stopPlay();go(cur-1,true);};
+document.getElementById('next').onclick=()=>{stopPlay();go(cur+1,true);};
+document.getElementById('replay').onclick=()=>{stopPlay();go(cur,false);};
+document.getElementById('play').onclick=()=>{
+  if(playing){stopPlay();clearMotion();return;}
+  playing=true; document.getElementById('play').textContent='⏸ 멈춤'; go(0,true);
+};
+document.querySelectorAll('.show-btn').forEach(b=>b.onclick=()=>{
+  stopPlay(); go(ORDER.indexOf(b.dataset.go),false);
+  document.querySelector('.diagram').scrollIntoView({block:'start',behavior:reduce?'auto':'smooth'});
+});
+// 스크롤하면 그림이 따라오기 (넓은 화면)
+if('IntersectionObserver' in window){
+  const io=new IntersectionObserver(es=>{
+    if(fromScroll||playing) return;
+    if(!matchMedia('(min-width:1000px)').matches) return;
+    const vis=es.filter(e=>e.isIntersecting).sort((a,b)=>a.boundingClientRect.top-b.boundingClientRect.top)[0];
+    if(vis){ const i=ORDER.indexOf(vis.target.dataset.step); if(i!==cur) go(i,false); }
+  },{rootMargin:'-30% 0px -60% 0px'});
+  document.querySelectorAll('.step').forEach(el=>io.observe(el));
+}
+document.addEventListener('keydown',e=>{
+  if(e.target.closest&&e.target.closest('input,textarea'))return;
+  if(e.key==='ArrowRight'){e.preventDefault();document.getElementById('next').click();}
+  if(e.key==='ArrowLeft'){e.preventDefault();document.getElementById('prev').click();}
+});
+go(cur,false);
+</script>
+</body>
+</html>
